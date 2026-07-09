@@ -35,3 +35,5 @@ node verify-html.js  # confirms the inline copy in index.html matches, and valid
 If you edit the solver, edit `dev/solver.js` first, run the tests, then sync the inline copy in `index.html` and run `verify-html.js`.
 
 `docs/spec.md` is the original functional specification.
+
+This was built using Claude. Please don’t use this tool if you have qualms about using code created with AI tools.
