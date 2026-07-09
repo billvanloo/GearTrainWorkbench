@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gear Train Workbench</title>
+<style>
+  :root{
+    --paper:#F6F5F0; --grid-minor:#E7E5DC; --grid-major:#D8D5C8;
+    --ink:#23272C; --ink-soft:#5A6068; --line:#C9C6BA;
+    --steel:#DCE1E6; --steel-edge:#7E8892; --steel-back:#C4CCD4;
+    --dykem:#1D5FA8; --dykem-soft:#E3ECF7;
+    --brass:#B08A2E; --brass-soft:#F5EBD2;
+    --pass:#2E7D46; --fail:#B3402F;
+    --dro-bg:#1D2126; --dro-amber:#FFB000; --dro-dim:#7A6428;
+    --font-ui:"Avenir Next","Segoe UI","Trebuchet MS",system-ui,sans-serif;
+    --font-mono:ui-monospace,"Cascadia Mono","SF Mono",Consolas,Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:var(--font-ui);color:var(--ink);background:var(--paper);display:flex;flex-direction:column;overflow:hidden}
+
+  /* ---------- Header / title block ---------- */
+  header{display:flex;align-items:center;gap:14px;padding:8px 14px;border-bottom:2px solid var(--ink);background:var(--paper);flex-wrap:wrap}
+  .titleblock{display:flex;flex-direction:column;line-height:1.1}
+  .titleblock .t1{font-size:15px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+  .titleblock .t2{font-size:10px;letter-spacing:.08em;color:var(--ink-soft);text-transform:uppercase}
+  .modes{display:flex;border:1.5px solid var(--ink);border-radius:3px;overflow:hidden}
+  .modes button{font:600 12px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;padding:7px 14px;border:none;background:transparent;color:var(--ink);cursor:pointer}
+  .modes button.on{background:var(--ink);color:var(--paper)}
+  .spacer{flex:1}
+  .namewrap{display:flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)}
+  .namewrap input{font:14px var(--font-ui);border:none;border-bottom:1.5px solid var(--ink);background:transparent;padding:3px 4px;width:150px;outline:none}
+  .hbtns{display:flex;gap:6px;flex-wrap:wrap}
+  .hbtns button{font:600 11px var(--font-ui);letter-spacing:.05em;padding:7px 10px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);border-radius:3px;cursor:pointer}
+  .hbtns button:hover{background:var(--ink);color:var(--paper)}
+  #unlockTag{display:none;font:600 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--fail);border:1px solid var(--fail);border-radius:3px;padding:3px 7px}
+
+  /* ---------- Main layout ---------- */
+  main{flex:1;display:flex;min-height:0}
+  #palette{width:118px;border-right:1.5px solid var(--line);padding:10px 8px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;background:#F1EFE8}
+  .pal-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin:6px 0 2px}
+  .gchip{display:flex;align-items:center;gap:8px;border:1.5px solid var(--steel-edge);background:#fff;border-radius:4px;padding:6px 8px;cursor:pointer;font:600 13px var(--font-mono)}
+  .gchip svg{flex:none}
+  .gchip:hover{border-color:var(--dykem);background:var(--dykem-soft)}
+  .gchip.armed{border-color:var(--dykem);background:var(--dykem);color:#fff}
+  .toolbtn{border:1.5px solid var(--ink);background:#fff;border-radius:4px;padding:7px 8px;cursor:pointer;font:600 11px var(--font-ui);letter-spacing:.04em;text-transform:uppercase;text-align:left}
+  .toolbtn:hover{background:var(--ink);color:#fff}
+  .toolbtn.armed{background:var(--ink);color:#fff}
+  .toolbtn.motor{border-color:var(--brass);color:var(--brass)}
+  .toolbtn.motor.armed,.toolbtn.motor:hover{background:var(--brass);color:#fff}
+  .toolbtn.load{border-color:var(--dykem);color:var(--dykem)}
+  .toolbtn.load.armed,.toolbtn.load:hover{background:var(--dykem);color:#fff}
+  .toolbtn.danger{border-color:var(--fail);color:var(--fail)}
+  .toolbtn.danger:hover{background:var(--fail);color:#fff}
+  .palctl{font-size:10px;color:var(--ink-soft);letter-spacing:.05em;text-transform:uppercase;margin-top:8px}
+  .palctl input[type=range]{width:100%}
+  .palctl label{display:flex;align-items:center;gap:5px;font-size:11px;text-transform:none;letter-spacing:0;color:var(--ink);margin-top:4px}
+
+  #stage{flex:1;display:flex;flex-direction:column;min-width:0}
+  #canvasWrap{flex:1;position:relative;min-height:0}
+  canvas#board{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+  #hint{position:absolute;left:12px;top:10px;font:11px var(--font-ui);letter-spacing:.04em;color:var(--ink-soft);background:rgba(246,245,240,.85);padding:4px 8px;border-radius:3px;pointer-events:none}
+  #toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:var(--ink);color:var(--paper);font:12px var(--font-ui);padding:7px 14px;border-radius:4px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:80%}
+
+  /* ---------- DRO readout bar (signature element) ---------- */
+  #dro{display:flex;align-items:stretch;gap:0;background:var(--dro-bg);border-top:3px solid var(--ink);padding:8px 12px;flex-wrap:wrap}
+  .dro-cell{display:flex;flex-direction:column;justify-content:center;padding:2px 18px 2px 6px;border-right:1px solid #343A41;min-width:120px}
+  .dro-cell:last-child{border-right:none}
+  .dro-label{font:600 9px var(--font-ui);letter-spacing:.16em;text-transform:uppercase;color:#8B929B}
+  .dro-val{font:700 22px var(--font-mono);color:var(--dro-amber);text-shadow:0 0 6px rgba(255,176,0,.35);white-space:nowrap}
+  .dro-val.dim{color:var(--dro-dim);text-shadow:none}
+  .dro-msg{flex:1;display:flex;align-items:center;font:12px var(--font-ui);color:#C7CCD2;padding-left:14px;min-width:180px}
+  .dro-msg.err{color:#FF8A6B}
+  .dro-stamp{display:none;align-items:center;font:700 15px var(--font-mono);letter-spacing:.2em;padding:0 14px;border:2px solid var(--pass);color:var(--pass);border-radius:3px;align-self:center}
+  .dro-stamp.fail{border-color:var(--fail);color:#FF8A6B}
+
+  /* ---------- Challenge panel ---------- */
+  #challengePanel{width:320px;border-left:1.5px solid var(--line);background:#F1EFE8;display:none;flex-direction:column;min-height:0}
+  #challengePanel.open{display:flex}
+  #chTiers{padding:10px 12px;border-bottom:1.5px solid var(--line);overflow-y:auto;max-height:38%}
+  .tier{margin-bottom:8px}
+  .tier-h{font:700 11px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);display:flex;align-items:center;gap:6px;margin-bottom:4px}
+  .tier-h .lock{font-size:11px}
+  .chbtn{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;font:600 12px var(--font-ui);padding:6px 9px;margin-bottom:3px;border:1.5px solid var(--line);border-radius:3px;background:#fff;cursor:pointer}
+  .chbtn:hover{border-color:var(--dykem)}
+  .chbtn.active{border-color:var(--dykem);background:var(--dykem-soft)}
+  .chbtn.done .tick{color:var(--pass);font-weight:700}
+  .chbtn:disabled{opacity:.45;cursor:not-allowed}
+  #chDetail{flex:1;overflow-y:auto;padding:12px}
+  #chDetail h3{font-size:14px;letter-spacing:.02em;margin-bottom:6px}
+  #chDetail .scenario{font-size:12.5px;line-height:1.5;margin-bottom:10px}
+  .given{font:12px var(--font-mono);background:#fff;border:1px solid var(--line);border-left:3px solid var(--brass);padding:7px 9px;margin-bottom:10px;line-height:1.6}
+  .predbox{border:1.5px solid var(--ink);border-radius:4px;background:#fff;padding:10px;margin-bottom:10px}
+  .predbox h4{font:700 10px var(--font-ui);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .predrow{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .predrow label{font-size:12px;width:92px}
+  .predrow input{font:14px var(--font-mono);width:90px;padding:5px 7px;border:1.5px solid var(--steel-edge);border-radius:3px}
+  .dirbtns{display:flex;gap:5px}
+  .dirbtns button{font:600 12px var(--font-mono);padding:5px 12px;border:1.5px solid var(--steel-edge);border-radius:3px;background:#fff;cursor:pointer}
+  .dirbtns button.on{border-color:var(--dykem);background:var(--dykem);color:#fff}
+  #runBtn{width:100%;font:700 13px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;padding:10px;border:none;border-radius:4px;background:var(--ink);color:var(--paper);cursor:pointer}
+  #runBtn:disabled{background:#B9B6AA;cursor:not-allowed}
+  #chResult{margin-top:10px;display:none}
+  #chResult table{width:100%;border-collapse:collapse;font:12px var(--font-mono);background:#fff}
+  #chResult th,#chResult td{border:1px solid var(--line);padding:5px 7px;text-align:left}
+  #chResult th{font:700 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;background:#EDEBE2}
+  #chResult td.ok{color:var(--pass);font-weight:700}
+  #chResult td.bad{color:var(--fail);font-weight:700}
+  #chProblems{font-size:12px;color:var(--fail);margin-top:8px;line-height:1.5}
+  #chAttempts{font:11px var(--font-ui);color:var(--ink-soft);margin-top:8px;letter-spacing:.04em}
+  .verdict{font:700 14px var(--font-mono);letter-spacing:.18em;text-align:center;padding:8px;border-radius:3px;margin-top:10px}
+  .verdict.pass{border:2px solid var(--pass);color:var(--pass)}
+  .verdict.fail{border:2px solid var(--fail);color:var(--fail)}
+
+  /* ---------- Sandbox motor controls ---------- */
+  #motorCtl{display:flex;gap:10px;align-items:center;padding:6px 12px;border-top:1.5px solid var(--line);background:#F1EFE8;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)}
+  #motorCtl input{font:13px var(--font-mono);width:64px;padding:3px 6px;border:1.5px solid var(--steel-edge);border-radius:3px}
+
+  /* ---------- Modal ---------- */
+  #modalBack{position:fixed;inset:0;background:rgba(35,39,44,.5);display:none;align-items:center;justify-content:center;z-index:50}
+  #modalBack.open{display:flex}
+  #modal{background:var(--paper);border:2px solid var(--ink);border-radius:5px;max-width:560px;width:92%;max-height:84vh;overflow-y:auto;padding:22px}
+  #modal h2{font-size:16px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+  #modal p,#modal li{font-size:13.5px;line-height:1.6;margin-bottom:8px}
+  #modal ul{padding-left:20px;margin-bottom:10px}
+  #modal .close{float:right;font:700 13px var(--font-ui);border:1.5px solid var(--ink);background:none;border-radius:3px;padding:5px 12px;cursor:pointer}
+  kbd{font:11px var(--font-mono);border:1px solid var(--steel-edge);border-bottom-width:2px;border-radius:3px;padding:1px 5px;background:#fff}
+
+  /* ---------- Print report ---------- */
+  #report{display:none}
+  @media print{
+    body>*{display:none !important}
+    body{overflow:visible}
+    #report{display:block !important;font-family:var(--font-ui);color:#000}
+    #report .rb{border:2px solid #000;padding:14px 18px;margin-bottom:12px}
+    #report h1{font-size:18px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:2px}
+    #report .sub{font-size:11px;letter-spacing:.06em;color:#444;margin-bottom:10px}
+    #report table{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
+    #report th,#report td{border:1px solid #000;padding:5px 8px;text-align:left}
+    #report th{background:#eee;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+    #report img{max-width:100%;border:1px solid #000}
+    #report .sig{margin-top:22px;font-size:12px}
+    #report .sig span{display:inline-block;border-top:1px solid #000;min-width:220px;padding-top:3px;margin-right:40px}
+  }
+
+  @media (max-width:860px){
+    #palette{width:96px}
+    #challengePanel{width:270px}
+    .dro-cell{min-width:96px}
+    .dro-val{font-size:17px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="titleblock">
+    <span class="t1">Gear Train Workbench</span>
+    <span class="t2">Engineering Education · Mechanisms &amp; Gear Systems</span>
+  </div>
+  <div class="modes">
+    <button id="modeSandbox" class="on">Sandbox</button>
+    <button id="modeChallenge">Challenge</button>
+  </div>
+  <span id="unlockTag">All tiers unlocked</span>
+  <div class="spacer"></div>
+  <div class="namewrap">Name <input id="studentName" placeholder="Your name" maxlength="40"></div>
+  <div class="hbtns">
+    <button id="btnPng" title="Download a PNG of your work">Export image</button>
+    <button id="btnReport" title="Printable PDF report">Report / PDF</button>
+    <button id="btnSave" title="Save design as a file">Save</button>
+    <button id="btnLoad" title="Load a saved design">Load</button>
+    <button id="btnHelp">?</button>
+  </div>
+  <input type="file" id="fileInput" accept=".json,application/json" style="display:none">
+</header>
+
+<main>
+  <div id="palette">
+    <div class="pal-label">Gears</div>
+    <div id="gearChips"></div>
+    <div class="pal-label">Tools</div>
+    <button class="toolbtn motor" id="toolMotor">⚙ Motor</button>
+    <button class="toolbtn load" id="toolLoad">◎ Load</button>
+    <button class="toolbtn danger" id="toolDelete">✕ Remove</button>
+    <button class="toolbtn" id="toolClear">Clear all</button>
+    <div class="palctl">
+      Animation speed
+      <input type="range" id="speedSlider" min="0.05" max="1" step="0.05" value="0.2">
+      <label><input type="checkbox" id="arrowsChk" checked> Direction arrows</label>
+      <label><input type="checkbox" id="labelsChk" checked> Tooth labels</label>
+    </div>
+  </div>
+
+  <div id="stage">
+    <div id="canvasWrap">
+      <canvas id="board"></canvas>
+      <div id="hint">Tap a gear size, then tap the sheet to place it. Drag gears near each other to snap into mesh; drop one on a hub to stack it (compound).</div>
+      <div id="toast"></div>
+    </div>
+    <div id="motorCtl">
+      <span>Motor</span>
+      RPM <input type="number" id="motorRpm" value="120" min="10" max="600" step="10">
+      Torque (N·cm) <input type="number" id="motorTorque" value="10" min="1" max="100" step="1">
+    </div>
+    <div id="dro">
+      <div class="dro-cell"><span class="dro-label">Ratio</span><span class="dro-val" id="droRatio">—</span></div>
+      <div class="dro-cell"><span class="dro-label">Output RPM</span><span class="dro-val" id="droRpm">—</span></div>
+      <div class="dro-cell"><span class="dro-label">Output N·cm</span><span class="dro-val" id="droTorque">—</span></div>
+      <div class="dro-cell"><span class="dro-label">Direction</span><span class="dro-val" id="droDir">—</span></div>
+      <div class="dro-msg" id="droMsg"></div>
+      <div class="dro-stamp" id="droStamp">PASS</div>
+    </div>
+  </div>
+
+  <div id="challengePanel">
+    <div id="chTiers"></div>
+    <div id="chDetail"><p style="font-size:12.5px;color:var(--ink-soft);padding:4px">Select a challenge to begin.</p></div>
+  </div>
+</main>
+
+<div id="modalBack">
+  <div id="modal">
+    <button class="close" id="modalClose">Close</button>
+    <h2>How to use the workbench</h2>
+    <p><strong>Build:</strong> tap a gear size in the palette, then tap the sheet. Drag gears near each other and they snap into mesh. Drop a gear onto another gear's hub to stack it on the same shaft — that's a <em>compound</em> pair (the second gear sits on the back plane, drawn darker).</p>
+    <p><strong>Power it:</strong> choose the Motor tool and tap a gear to attach the motor. Do the same with the Load tool where you want to measure output.</p>
+    <p><strong>Read it:</strong> the amber readout shows overall ratio, output speed, output torque, and direction. CW = clockwise.</p>
+    <ul>
+      <li>Meshed gears turn opposite directions; gears on one shaft turn together.</li>
+      <li>Ideal train: speed ÷ R, torque × R. Power in = power out.</li>
+      <li>Gears only mesh within the same plane. Front-plane gears are light; back-plane gears are darker.</li>
+    </ul>
+    <p><strong>Challenge mode:</strong> build the train, then enter your <em>predicted</em> output before you run. The workbench compares your prediction to the actual result — calculate first, then check.</p>
+    <p><strong>Keys:</strong> <kbd>Delete</kbd> removes the selected gear. <kbd>Esc</kbd> cancels a tool.</p>
+  </div>
+</div>
+
+<div id="report"></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   SOLVER CORE (unit-tested separately — keep in sync with solver.js)
+   ===================================================================== */
+const MODULE = 4.5;
+const MESH_EPS = 2.5;
+const RPM_EPS = 0.01;
+function pitchRadius(teeth){ return teeth * MODULE / 2; }
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+function solve(state){
+  const shaftById = {}; state.shafts.forEach(s => shaftById[s.id] = s);
+  const gearsByShaft = {}; state.gears.forEach(g => { (gearsByShaft[g.shaftId] = gearsByShaft[g.shaftId] || []).push(g); });
+  const meshes = [], overlaps = [];
+  const gs = state.gears;
+  for (let i=0;i<gs.length;i++) for (let j=i+1;j<gs.length;j++){
+    const a=gs[i], b=gs[j];
+    if (a.shaftId===b.shaftId) continue;
+    if ((a.layer||0)!==(b.layer||0)) continue;
+    const d = dist(shaftById[a.shaftId], shaftById[b.shaftId]);
+    const target = pitchRadius(a.teeth)+pitchRadius(b.teeth);
+    if (Math.abs(d-target) <= MESH_EPS) meshes.push([a.id,b.id]);
+    else if (d < target - MESH_EPS) overlaps.push([a.id,b.id]);
+  }
+  const res = { ok:true, error:null, shaftRpm:{}, shaftTorque:{}, reachable:new Set(), meshes, overlaps, out:null, ratioText:'—' };
+  if (overlaps.length){ res.ok=false; res.error='Gears overlap without meshing. Drag them apart or snap them into mesh.'; }
+  if (!state.motor){ if(res.ok) res.error='Add a motor to power the train.'; res.ok=false; return res; }
+  const gearById={}; gs.forEach(g=>gearById[g.id]=g);
+  const meshMap={};
+  meshes.forEach(([a,b])=>{ (meshMap[a]=meshMap[a]||[]).push(b); (meshMap[b]=meshMap[b]||[]).push(a); });
+  const rpm={}; rpm[state.motor.shaftId]=state.motor.rpm;
+  res.reachable.add(state.motor.shaftId);
+  const queue=[state.motor.shaftId];
+  while(queue.length){
+    const sid=queue.shift(); const w=rpm[sid];
+    for (const g of (gearsByShaft[sid]||[])){
+      for (const hid of (meshMap[g.id]||[])){
+        const h=gearById[hid];
+        const wt = -w * (g.teeth/h.teeth);
+        if (Object.prototype.hasOwnProperty.call(rpm, h.shaftId)){
+          if (Math.abs(rpm[h.shaftId]-wt) > RPM_EPS){
+            res.ok=false; res.error='This train is over-constrained: a loop forces one shaft to spin at two different speeds.';
+            res.shaftRpm=rpm; return res;
+          }
+        } else { rpm[h.shaftId]=wt; res.reachable.add(h.shaftId); queue.push(h.shaftId); }
+      }
+    }
+  }
+  res.shaftRpm=rpm;
+  const P = Math.abs(state.motor.rpm*state.motor.torque);
+  for (const sid of res.reachable){
+    const w=Math.abs(rpm[sid]);
+    res.shaftTorque[sid] = w>RPM_EPS ? P/w : null;
+  }
+  const unreachable = gs.filter(g=>!res.reachable.has(g.shaftId));
+  if (res.ok && unreachable.length){
+    res.error = unreachable.length + ' gear' + (unreachable.length>1?'s are':' is') + ' not connected to the motor.';
+  }
+  if (state.load && res.reachable.has(state.load.shaftId)){
+    const w=rpm[state.load.shaftId];
+    res.out = { rpm:Math.abs(w), torque:res.shaftTorque[state.load.shaftId], dir: w>0?'CW':(w<0?'CCW':'—') };
+    if (Math.abs(w)>RPM_EPS){
+      const r=Math.abs(state.motor.rpm)/Math.abs(w);
+      res.ratioText = r>=1 ? fmtNum(r)+' : 1' : '1 : '+fmtNum(1/r);
+    }
+  } else if (state.load){
+    if (res.ok) res.error='The load is not connected to the motor.';
+  } else if (res.ok && !res.error){
+    res.error='Add a load to measure output.';
+  }
+  return res;
+}
+function fmtNum(n){
+  if (n==null || !isFinite(n)) return '—';
+  const r=Math.round(n*100)/100;
+  return (Math.abs(r-Math.round(r))<1e-9) ? String(Math.round(r)) : String(r);
+}
+function evaluateChallenge(ch, state, solved, pred){
+  const problems=[];
+  if (!solved.out){ problems.push('No measurable output — check that motor and load are placed and connected.'); return {pass:false,problems,predOk:false,targetOk:false}; }
+  if (solved.error && !solved.ok){ problems.push(solved.error); return {pass:false,problems,predOk:false,targetOk:false}; }
+  const tol=(ch.target.tolPct!=null?ch.target.tolPct:2)/100;
+  const within=(a,b)=>Math.abs(a-b)<=Math.abs(b)*tol+1e-9;
+  if (ch.constraints){
+    if (ch.constraints.maxTeeth && state.gears.some(g=>g.teeth>ch.constraints.maxTeeth))
+      problems.push('Constraint: no gear may exceed '+ch.constraints.maxTeeth+' teeth.');
+    if (ch.constraints.maxGears && state.gears.length>ch.constraints.maxGears)
+      problems.push('Constraint: use at most '+ch.constraints.maxGears+' gears.');
+    if (ch.constraints.minGears && state.gears.length<ch.constraints.minGears)
+      problems.push('Constraint: use at least '+ch.constraints.minGears+' gears.');
+  }
+  let targetOk=true;
+  if (ch.target.rpm!=null && !within(solved.out.rpm,ch.target.rpm)){ targetOk=false; problems.push('Output speed is '+fmtNum(solved.out.rpm)+' RPM; target is '+fmtNum(ch.target.rpm)+' RPM.'); }
+  if (ch.target.torque!=null && !within(solved.out.torque,ch.target.torque)){ targetOk=false; problems.push('Output torque is '+fmtNum(solved.out.torque)+' N·cm; target is '+fmtNum(ch.target.torque)+' N·cm.'); }
+  if (ch.target.minTorque!=null && solved.out.torque < ch.target.minTorque-1e-9){ targetOk=false; problems.push('Output torque is '+fmtNum(solved.out.torque)+' N·cm; needs at least '+fmtNum(ch.target.minTorque)+' N·cm.'); }
+  if (ch.target.rpmWindow && (solved.out.rpm<ch.target.rpmWindow[0]||solved.out.rpm>ch.target.rpmWindow[1])){ targetOk=false; problems.push('Output speed is '+fmtNum(solved.out.rpm)+' RPM; must be between '+ch.target.rpmWindow[0]+' and '+ch.target.rpmWindow[1]+' RPM.'); }
+  if (ch.target.dir && solved.out.dir!==ch.target.dir){ targetOk=false; problems.push('Output direction is '+solved.out.dir+'; target is '+ch.target.dir+'.'); }
+  if (targetOk===true && problems.length) targetOk=false;
+  let predOk=true;
+  if (!within(pred.rpm,solved.out.rpm)) predOk=false;
+  if (!within(pred.torque,solved.out.torque)) predOk=false;
+  if (pred.dir!==solved.out.dir) predOk=false;
+  return { pass:targetOk&&predOk, predOk, targetOk, problems };
+}
+
+/* =====================================================================
+   CHALLENGE DEFINITIONS — edit freely. Teachers: values assume an ideal
+   (lossless) train. tolPct is the ± tolerance for predictions & targets.
+   ===================================================================== */
+const CHALLENGES = [
+  { tier:1, tierName:'Simple Meshes', id:'1.1', title:'First Mesh',
+    scenario:'A display turntable needs to spin at half the motor speed. Connect the motor to a 12-tooth gear driving a 24-tooth gear with the load.',
+    motor:{rpm:120, torque:10},
+    allowed:[12,24], constraints:{maxGears:2},
+    target:{rpm:60, torque:20, dir:'CCW', tolPct:2} },
+  { tier:1, tierName:'Simple Meshes', id:'1.2', title:'Speed Up',
+    scenario:'A fan needs to spin four times faster than the motor. Drive a 10-tooth gear with a 40-tooth gear. What happens to the torque?',
+    motor:{rpm:120, torque:10},
+    allowed:[40,10], constraints:{maxGears:2},
+    target:{rpm:480, torque:2.5, dir:'CCW', tolPct:2} },
+  { tier:2, tierName:'Trains & Idlers', id:'2.1', title:'The Idler',
+    scenario:'Same 2:1 reduction as before — but this time the output must turn the SAME direction as the motor. Add a 20-tooth idler between the 12T and 24T gears. Predict what the idler does to the ratio.',
+    motor:{rpm:120, torque:10},
+    allowed:[12,20,24], constraints:{minGears:3, maxGears:3},
+    target:{rpm:60, torque:20, dir:'CW', tolPct:2} },
+  { tier:2, tierName:'Trains & Idlers', id:'2.2', title:'Three to One',
+    scenario:'A conveyor drum needs a 3:1 reduction and must rotate clockwise like the motor. Build a train from a 10T, a 16T, and a 30T gear.',
+    motor:{rpm:120, torque:10},
+    allowed:[10,16,30], constraints:{minGears:3, maxGears:3},
+    target:{rpm:40, torque:30, dir:'CW', tolPct:2} },
+  { tier:3, tierName:'Compound Trains', id:'3.1', title:'Twelve to One',
+    scenario:'A lift mechanism needs a 12:1 reduction, but no gear larger than 40 teeth fits in the housing. A single mesh can\u2019t do it \u2014 stack two gears on a middle shaft (a compound stage) and multiply the stage ratios.',
+    motor:{rpm:120, torque:5},
+    allowed:[10,30,40], constraints:{maxTeeth:40},
+    target:{rpm:10, torque:60, dir:'CW', tolPct:2} },
+  { tier:3, tierName:'Compound Trains', id:'3.2', title:'Sixteen to One',
+    scenario:'Now push further: a 16:1 reduction with nothing over 40 teeth. Two identical 4:1 compound stages will do it. Calculate the output before you run.',
+    motor:{rpm:120, torque:10},
+    allowed:[10,40], constraints:{maxTeeth:40},
+    target:{rpm:7.5, torque:160, dir:'CW', tolPct:2} },
+  { tier:4, tierName:'Design Brief', id:'4.1', title:'The Winch',
+    scenario:'DESIGN BRIEF: A classroom winch must output between 14 and 16 RPM and deliver at least 60 N\u00b7cm of torque, using no more than 6 gears. Any direction is acceptable. Multiple designs can pass \u2014 engineer one, predict its exact output, and prove it.',
+    motor:{rpm:120, torque:10},
+    allowed:[8,10,12,16,20,24,30,40,60], constraints:{maxGears:6},
+    target:{rpmWindow:[14,16], minTorque:60, tolPct:2} }
+];
+const PALETTE_TEETH = [8,10,12,16,20,24,30,40,60];
+
+/* =====================================================================
+   APP STATE
+   ===================================================================== */
+const S = {
+  gears:[], shafts:[], motor:null, load:null,
+  motorSpecs:{rpm:120, torque:10},
+  mode:'sandbox',                    // 'sandbox' | 'challenge'
+  activeChallenge:null,              // challenge object
+  attempts:{}, completed:{},         // by challenge id
+  lastRun:null,                      // {pred, actual, eval, challengeId}
+  revealed:true,                     // challenge mode hides readouts until run
+  tool:null,                         // 'motor'|'load'|'delete'|null
+  placingTeeth:null,
+  selectedGear:null,
+  drag:null,                         // {gearId, wholeShaft, offX, offY, snap}
+  speed:0.2, showArrows:true, showLabels:true,
+  unlockAll:false,
+  idc:0
+};
+function uid(p){ return p + (++S.idc); }
+
+/* =====================================================================
+   CANVAS RENDERING
+   ===================================================================== */
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+let CW=0, CH=0, DPR=1;
+function resize(){
+  const r = canvas.getBoundingClientRect();
+  DPR = window.devicePixelRatio || 1;
+  CW = r.width; CH = r.height;
+  canvas.width = Math.round(CW*DPR); canvas.height = Math.round(CH*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', resize);
+
+function shaftById(id){ return S.shafts.find(s=>s.id===id); }
+function gearsOn(sid){ return S.gears.filter(g=>g.shaftId===sid); }
+
+function drawGrid(c, w, h){
+  c.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--paper');
+  c.fillRect(0,0,w,h);
+  const minor=20, major=100;
+  c.lineWidth=1;
+  for(let x=0;x<=w;x+=minor){ c.strokeStyle = (x%major===0)?'#D8D5C8':'#E7E5DC'; c.beginPath(); c.moveTo(x+.5,0); c.lineTo(x+.5,h); c.stroke(); }
+  for(let y=0;y<=h;y+=minor){ c.strokeStyle = (y%major===0)?'#D8D5C8':'#E7E5DC'; c.beginPath(); c.moveTo(0,y+.5); c.lineTo(w,y+.5); c.stroke(); }
+}
+
+function gearPath(c, r, teeth, angle){
+  const tipH = Math.min(6, r*0.28), rootH = Math.min(3.2, r*0.16);
+  const rTip = r + tipH*0.55, rRoot = r - rootH;
+  const n = teeth;
+  c.beginPath();
+  for (let i=0;i<n;i++){
+    const a0 = angle + (i/n)*Math.PI*2;
+    const a1 = angle + ((i+0.25)/n)*Math.PI*2;
+    const a2 = angle + ((i+0.5)/n)*Math.PI*2;
+    const a3 = angle + ((i+0.75)/n)*Math.PI*2;
+    if (i===0) c.moveTo(Math.cos(a0)*rRoot, Math.sin(a0)*rRoot);
+    else c.lineTo(Math.cos(a0)*rRoot, Math.sin(a0)*rRoot);
+    c.lineTo(Math.cos(a1)*rTip,  Math.sin(a1)*rTip);
+    c.lineTo(Math.cos(a2)*rTip,  Math.sin(a2)*rTip);
+    c.lineTo(Math.cos(a3)*rRoot, Math.sin(a3)*rRoot);
+  }
+  c.closePath();
+}
+
+function drawScene(c, w, h, solved, opts){
+  opts = opts || {};
+  drawGrid(c, w, h);
+  // Back layer first, then front, so front reads on top
+  const order = S.gears.slice().sort((a,b)=>(b.layer||0)-(a.layer||0));
+  for (const g of order){
+    const s = shaftById(g.shaftId); if (!s) continue;
+    const r = pitchRadius(g.teeth);
+    const back = (g.layer||0)===1;
+    c.save();
+    c.translate(s.x, s.y);
+    gearPath(c, r, g.teeth, s.angle||0);
+    c.fillStyle = back ? '#C4CCD4' : '#DCE1E6';
+    if (S.selectedGear===g.id) c.fillStyle = back ? '#B9C8DE' : '#CBDCF2';
+    c.fill();
+    c.lineWidth = 1.6;
+    c.strokeStyle = back ? '#6B747E' : '#7E8892';
+    c.stroke();
+    // pitch circle (drafting convention: thin dash-dot)
+    c.setLineDash([6,3,1.5,3]);
+    c.lineWidth = 0.8;
+    c.strokeStyle = '#9AA3AC';
+    c.beginPath(); c.arc(0,0,r,0,Math.PI*2); c.stroke();
+    c.setLineDash([]);
+    // spokes hint of rotation
+    c.strokeStyle = back ? 'rgba(90,100,110,.5)' : 'rgba(126,136,146,.55)';
+    c.lineWidth = 1.2;
+    for (let k=0;k<3;k++){
+      const a=(s.angle||0)+k*Math.PI*2/3;
+      c.beginPath(); c.moveTo(Math.cos(a)*r*0.25, Math.sin(a)*r*0.25); c.lineTo(Math.cos(a)*r*0.72, Math.sin(a)*r*0.72); c.stroke();
+    }
+    // tooth label
+    if (S.showLabels){
+      c.fillStyle = '#23272C';
+      c.font = '600 '+Math.max(10, Math.min(14, r*0.32))+'px ui-monospace, Consolas, monospace';
+      c.textAlign='center'; c.textBaseline='middle';
+      c.fillText(g.teeth+'T', 0, back? r*0.5 : -r*0.5);
+    }
+    c.restore();
+  }
+  // hubs + badges + arrows
+  for (const s of S.shafts){
+    const gl = gearsOn(s.id); if (!gl.length) continue;
+    c.save(); c.translate(s.x, s.y);
+    c.beginPath(); c.arc(0,0,7,0,Math.PI*2);
+    c.fillStyle='#F6F5F0'; c.fill();
+    c.lineWidth=2; c.strokeStyle='#23272C'; c.stroke();
+    c.beginPath(); c.arc(0,0,2.2,0,Math.PI*2); c.fillStyle='#23272C'; c.fill();
+    if (gl.length===2){ // compound tag
+      c.font='700 9px ui-monospace, Consolas, monospace'; c.fillStyle='#5A6068';
+      c.textAlign='center'; c.fillText('×2', 0, 16);
+    }
+    const isM = S.motor && S.motor.shaftId===s.id;
+    const isL = S.load && S.load.shaftId===s.id;
+    if (isM || isL){
+      const col = isM ? '#B08A2E' : '#1D5FA8';
+      const txt = isM ? 'M' : 'L';
+      c.beginPath(); c.arc(0,-0,0,0,0); // noop guard
+      c.beginPath(); c.arc(14,-14,10,0,Math.PI*2);
+      c.fillStyle=col; c.fill();
+      c.lineWidth=1.5; c.strokeStyle='#F6F5F0'; c.stroke();
+      c.fillStyle='#fff'; c.font='700 11px ui-monospace, Consolas, monospace';
+      c.textAlign='center'; c.textBaseline='middle'; c.fillText(txt, 14, -13.5);
+      if (isM && isL){
+        c.beginPath(); c.arc(-14,-14,10,0,Math.PI*2);
+        c.fillStyle='#1D5FA8'; c.fill(); c.strokeStyle='#F6F5F0'; c.stroke();
+        c.fillStyle='#fff'; c.fillText('L', -14, -13.5);
+      }
+    }
+    // direction arrows
+    if (S.showArrows && solved && solved.shaftRpm && Object.prototype.hasOwnProperty.call(solved.shaftRpm, s.id) && (opts.reveal!==false)){
+      const w = solved.shaftRpm[s.id];
+      if (Math.abs(w)>RPM_EPS){
+        const big = Math.max.apply(null, gl.map(g=>pitchRadius(g.teeth)));
+        const ar = big + 12;
+        const cw = w>0;
+        c.strokeStyle='#1D5FA8'; c.lineWidth=2;
+        const a0 = -Math.PI/3, a1 = Math.PI/6;
+        c.beginPath(); c.arc(0,0,ar, cw?a0:a1, cw?a1:a0, !cw); c.stroke();
+        const tip = cw ? a1 : a0;
+        const tx=Math.cos(tip)*ar, ty=Math.sin(tip)*ar;
+        const tang = tip + (cw?Math.PI/2:-Math.PI/2);
+        c.fillStyle='#1D5FA8';
+        c.beginPath();
+        c.moveTo(tx+Math.cos(tang)*7, ty+Math.sin(tang)*7);
+        c.lineTo(tx+Math.cos(tang+2.5)*6, ty+Math.sin(tang+2.5)*6);
+        c.lineTo(tx+Math.cos(tang-2.5)*6, ty+Math.sin(tang-2.5)*6);
+        c.closePath(); c.fill();
+      }
+    }
+    c.restore();
+  }
+  // snap preview
+  if (S.drag && S.drag.snap){
+    const sn = S.drag.snap;
+    c.save();
+    c.strokeStyle='#1D5FA8'; c.lineWidth=2; c.setLineDash([5,4]);
+    if (sn.type==='mesh'){
+      c.beginPath(); c.arc(sn.x, sn.y, pitchRadius(sn.teeth), 0, Math.PI*2); c.stroke();
+      const t=shaftById(sn.targetShaft);
+      c.beginPath(); c.moveTo(sn.x,sn.y); c.lineTo(t.x,t.y); c.stroke();
+    } else if (sn.type==='stack'){
+      const t=shaftById(sn.targetShaft);
+      c.beginPath(); c.arc(t.x, t.y, 14, 0, Math.PI*2); c.stroke();
+    }
+    c.restore();
+  }
+}
+
+/* =====================================================================
+   SOLVE + READOUT
+   ===================================================================== */
+let solved = null;
+function resolve(){
+  const st = { gears:S.gears, shafts:S.shafts,
+    motor: S.motor ? {shaftId:S.motor.shaftId, rpm:S.motorSpecs.rpm, torque:S.motorSpecs.torque} : null,
+    load: S.load };
+  solved = solve(st);
+  updateDRO();
+  updateRunBtn();
+}
+function droEl(id){ return document.getElementById(id); }
+function updateDRO(){
+  const hide = (S.mode==='challenge' && !S.revealed);
+  const set=(id,val,dim)=>{ const e=droEl(id); e.textContent=val; e.classList.toggle('dim', !!dim); };
+  if (hide){
+    set('droRatio','· · ·',true); set('droRpm','· · ·',true); set('droTorque','· · ·',true); set('droDir','· · ·',true);
+    droEl('droMsg').textContent = 'Readout hidden — enter your prediction, then Run.';
+    droEl('droMsg').classList.remove('err');
+    return;
+  }
+  if (solved && solved.out){
+    set('droRatio', solved.ratioText);
+    set('droRpm', fmtNum(solved.out.rpm));
+    set('droTorque', fmtNum(solved.out.torque));
+    set('droDir', solved.out.dir);
+  } else {
+    set('droRatio','—',true); set('droRpm','—',true); set('droTorque','—',true); set('droDir','—',true);
+  }
+  const msg = droEl('droMsg');
+  msg.textContent = (solved && solved.error) ? solved.error : (S.gears.length? '' : 'Place gears to begin.');
+  msg.classList.toggle('err', !!(solved && !solved.ok));
+}
+
+/* =====================================================================
+   ANIMATION
+   ===================================================================== */
+let lastT = 0;
+function tick(t){
+  const dt = Math.min(0.05, (t-lastT)/1000 || 0); lastT = t;
+  const animate = solved && solved.shaftRpm && (S.mode==='sandbox' || S.revealed);
+  if (animate){
+    for (const s of S.shafts){
+      if (Object.prototype.hasOwnProperty.call(solved.shaftRpm, s.id)){
+        s.angle = (s.angle||0) + solved.shaftRpm[s.id] * Math.PI*2/60 * dt * S.speed * 4;
+      }
+    }
+  }
+  drawScene(ctx, CW, CH, solved, {reveal: S.mode==='sandbox' || S.revealed});
+  requestAnimationFrame(tick);
+}
+
+/* =====================================================================
+   INTERACTION
+   ===================================================================== */
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.opacity=1;
+  clearTimeout(t._h); t._h=setTimeout(()=>t.style.opacity=0, 2600);
+}
+function canvasPos(ev){
+  const r=canvas.getBoundingClientRect();
+  return {x:ev.clientX-r.left, y:ev.clientY-r.top};
+}
+function hitGear(p){
+  // topmost front-layer first, smaller gears win ties
+  const cands = S.gears
+    .map(g=>({g, s:shaftById(g.shaftId), r:pitchRadius(g.teeth)+5}))
+    .filter(o=>o.s && dist(p,o.s)<=o.r)
+    .sort((a,b)=>((a.g.layer||0)-(b.g.layer||0)) || (a.r-b.r));
+  return cands.length? cands[0].g : null;
+}
+function hitHub(p, excludeShaft){
+  for (const s of S.shafts){
+    if (s.id===excludeShaft) continue;
+    if (gearsOn(s.id).length && dist(p,s)<=18) return s;
+  }
+  return null;
+}
+function sameLayerOverlap(gear, pos){
+  for (const h of S.gears){
+    if (h.id===gear.id || h.shaftId===gear.shaftId) continue;
+    if ((h.layer||0)!==(gear.layer||0)) continue;
+    const hs=shaftById(h.shaftId);
+    const d=dist(pos,hs), target=pitchRadius(gear.teeth)+pitchRadius(h.teeth);
+    if (d < target - MESH_EPS) return true;
+  }
+  return false;
+}
+function computeSnap(gear, pos){
+  // Mesh snap: nearest gear (any layer — we adopt its layer) with |d - (r1+r2)| < SNAP
+  const SNAP=16;
+  let best=null;
+  for (const h of S.gears){
+    if (h.id===gear.id || h.shaftId===gear.shaftId) continue;
+    const hs=shaftById(h.shaftId);
+    const d=dist(pos,hs);
+    const target=pitchRadius(gear.teeth)+pitchRadius(h.teeth);
+    const err=Math.abs(d-target);
+    if (err<SNAP && (!best || err<best.err)){
+      const ux=(pos.x-hs.x)/(d||1), uy=(pos.y-hs.y)/(d||1);
+      best={ type:'mesh', err, targetShaft:h.shaftId, layer:(h.layer||0), teeth:gear.teeth,
+             x:hs.x+ux*target, y:hs.y+uy*target };
+    }
+  }
+  // Stack snap: hub of a shaft with exactly 1 gear
+  const hub = hitHub(pos, gear.shaftId);
+  if (hub && gearsOn(hub.id).length===1){
+    const d=dist(pos,hub);
+    if (!best || d<best.err) best={ type:'stack', err:d, targetShaft:hub.id };
+  }
+  return best;
+}
+
+canvas.addEventListener('pointerdown', ev=>{
+  ev.preventDefault();
+  canvas.setPointerCapture(ev.pointerId);
+  const p=canvasPos(ev);
+
+  // Placement mode
+  if (S.placingTeeth){
+    const sid=uid('s'); 
+    S.shafts.push({id:sid,x:p.x,y:p.y,angle:0});
+    const g={id:uid('g'), teeth:S.placingTeeth, shaftId:sid, layer:0};
+    if (sameLayerOverlap(g,p)){ S.shafts.pop(); toast('Too close to another gear — pick an open spot.'); return; }
+    S.gears.push(g);
+    S.selectedGear=g.id;
+    // keep placement armed for quick multi-drop? one at a time keeps it predictable:
+    setPlacing(null);
+    resolve(); return;
+  }
+  const g = hitGear(p);
+  const hub = (!g) ? hitHub(p) : null;
+
+  // Tools
+  if (S.tool==='motor' || S.tool==='load'){
+    const target = g ? shaftById(g.shaftId) : hub;
+    if (target){
+      if (S.tool==='motor') S.motor={shaftId:target.id};
+      else S.load={shaftId:target.id};
+      setTool(null); resolve();
+    } else toast('Tap a gear to attach it.');
+    return;
+  }
+  if (S.tool==='delete'){
+    if (g){ removeGear(g.id); resolve(); }
+    return;
+  }
+
+  // Drag whole shaft by hub (compound pairs move together)
+  if (hub){
+    S.drag={ wholeShaft:hub.id, offX:p.x-hub.x, offY:p.y-hub.y, startX:hub.x, startY:hub.y };
+    return;
+  }
+  if (g){
+    S.selectedGear=g.id;
+    const s=shaftById(g.shaftId);
+    S.drag={ gearId:g.id, offX:p.x-s.x, offY:p.y-s.y, startX:s.x, startY:s.y, startShaft:g.shaftId, detached:false, snap:null };
+    return;
+  }
+  S.selectedGear=null;
+});
+
+canvas.addEventListener('pointermove', ev=>{
+  if (!S.drag) return;
+  const p=canvasPos(ev);
+  if (S.drag.wholeShaft){
+    const s=shaftById(S.drag.wholeShaft);
+    s.x=p.x-S.drag.offX; s.y=p.y-S.drag.offY;
+    resolve(); return;
+  }
+  const g=S.gears.find(x=>x.id===S.drag.gearId); if(!g) { S.drag=null; return; }
+  // Detach from a shared shaft once dragged
+  if (!S.drag.detached && gearsOn(g.shaftId).length>1){
+    const sid=uid('s'); const old=shaftById(g.shaftId);
+    S.shafts.push({id:sid, x:old.x, y:old.y, angle:old.angle||0});
+    g.shaftId=sid; S.drag.detached=true; S.drag.startShaft=sid;
+  }
+  const s=shaftById(g.shaftId);
+  const raw={x:p.x-S.drag.offX, y:p.y-S.drag.offY};
+  const snap=computeSnap(g, raw);
+  S.drag.snap=snap;
+  if (snap && snap.type==='mesh'){ s.x=snap.x; s.y=snap.y; }
+  else { s.x=raw.x; s.y=raw.y; }
+  resolve();
+});
+
+canvas.addEventListener('pointerup', ev=>{
+  if (!S.drag) return;
+  const drag=S.drag; S.drag=null;
+  if (drag.wholeShaft){ resolve(); return; }
+  const g=S.gears.find(x=>x.id===drag.gearId); if(!g){ resolve(); return; }
+  const s=shaftById(g.shaftId);
+  const snap=drag.snap;
+  if (snap && snap.type==='stack'){
+    const target=shaftById(snap.targetShaft);
+    const existing=gearsOn(target.id)[0];
+    const newLayer = 1-(existing.layer||0);
+    // remove g's own shaft, join target
+    const oldShaft=g.shaftId;
+    g.shaftId=target.id; g.layer=newLayer;
+    cleanupShaft(oldShaft);
+    toast('Stacked on shared shaft — compound stage. Back-plane gear is drawn darker.');
+  } else if (snap && snap.type==='mesh'){
+    g.layer=snap.layer; // adopt the plane of the gear it meshed with
+    if (sameLayerOverlap(g,{x:s.x,y:s.y})){ s.x=drag.startX; s.y=drag.startY; toast('That spot collides with another gear on the same plane.'); }
+  } else {
+    if (sameLayerOverlap(g,{x:s.x,y:s.y})){ s.x=drag.startX; s.y=drag.startY; toast('That spot collides with another gear on the same plane.'); }
+  }
+  resolve();
+});
+
+function cleanupShaft(sid){
+  if (!gearsOn(sid).length){
+    S.shafts=S.shafts.filter(s=>s.id!==sid);
+    if (S.motor && S.motor.shaftId===sid) S.motor=null;
+    if (S.load && S.load.shaftId===sid) S.load=null;
+  }
+}
+function removeGear(gid){
+  const g=S.gears.find(x=>x.id===gid); if(!g) return;
+  const sid=g.shaftId;
+  S.gears=S.gears.filter(x=>x.id!==gid);
+  if (S.selectedGear===gid) S.selectedGear=null;
+  cleanupShaft(sid);
+}
+function clearAll(){
+  S.gears=[]; S.shafts=[]; S.motor=null; S.load=null; S.selectedGear=null;
+  resolve();
+}
+
+document.addEventListener('keydown', ev=>{
+  if (ev.target.tagName==='INPUT') return;
+  if (ev.key==='Delete' || ev.key==='Backspace'){
+    if (S.selectedGear){ removeGear(S.selectedGear); resolve(); }
+  }
+  if (ev.key==='Escape'){ setTool(null); setPlacing(null); }
+  if (ev.altKey && ev.shiftKey && (ev.key==='U'||ev.key==='u')){
+    S.unlockAll=!S.unlockAll;
+    document.getElementById('unlockTag').style.display=S.unlockAll?'inline-block':'none';
+    renderTierList();
+  }
+});
+
+/* =====================================================================
+   PALETTE UI
+   ===================================================================== */
+function gearChipSVG(teeth){
+  const r=9, n=Math.min(teeth,12);
+  let d='';
+  for(let i=0;i<n;i++){
+    const a0=(i/n)*Math.PI*2, a1=((i+0.5)/n)*Math.PI*2;
+    d+=(i? 'L':'M')+(Math.cos(a0)*r).toFixed(1)+' '+(Math.sin(a0)*r).toFixed(1)+' ';
+    d+='L'+(Math.cos(a1)*(r+3)).toFixed(1)+' '+(Math.sin(a1)*(r+3)).toFixed(1)+' ';
+  }
+  return '<svg width="26" height="26" viewBox="-13 -13 26 26"><path d="'+d+'Z" fill="#DCE1E6" stroke="#7E8892" stroke-width="1.2"/><circle r="2" fill="#23272C"/></svg>';
+}
+const chipWrap=document.getElementById('gearChips');
+PALETTE_TEETH.forEach(t=>{
+  const b=document.createElement('button');
+  b.className='gchip'; b.innerHTML=gearChipSVG(t)+'<span>'+t+'T</span>';
+  b.dataset.teeth=t;
+  b.addEventListener('click',()=>setPlacing(S.placingTeeth===t?null:t));
+  chipWrap.appendChild(b);
+});
+function setPlacing(teeth){
+  S.placingTeeth=teeth;
+  if (teeth) setTool(null);
+  document.querySelectorAll('.gchip').forEach(b=>b.classList.toggle('armed', Number(b.dataset.teeth)===teeth));
+  canvas.style.cursor = teeth? 'copy':'crosshair';
+}
+function setTool(t){
+  S.tool = (S.tool===t)? null : t;
+  if (S.tool) setPlacing(null);
+  document.getElementById('toolMotor').classList.toggle('armed', S.tool==='motor');
+  document.getElementById('toolLoad').classList.toggle('armed', S.tool==='load');
+  document.getElementById('toolDelete').classList.toggle('armed', S.tool==='delete');
+}
+document.getElementById('toolMotor').addEventListener('click',()=>setTool('motor'));
+document.getElementById('toolLoad').addEventListener('click',()=>setTool('load'));
+document.getElementById('toolDelete').addEventListener('click',()=>setTool('delete'));
+document.getElementById('toolClear').addEventListener('click',()=>{ if(confirm('Clear the whole sheet?')) clearAll(); });
+document.getElementById('speedSlider').addEventListener('input',e=>S.speed=Number(e.target.value));
+document.getElementById('arrowsChk').addEventListener('change',e=>S.showArrows=e.target.checked);
+document.getElementById('labelsChk').addEventListener('change',e=>S.showLabels=e.target.checked);
+document.getElementById('motorRpm').addEventListener('input',e=>{ S.motorSpecs.rpm=Number(e.target.value)||120; resolve(); });
+document.getElementById('motorTorque').addEventListener('input',e=>{ S.motorSpecs.torque=Number(e.target.value)||10; resolve(); });
+
+/* =====================================================================
+   MODES + CHALLENGE SYSTEM
+   ===================================================================== */
+const panel=document.getElementById('challengePanel');
+document.getElementById('modeSandbox').addEventListener('click',()=>setMode('sandbox'));
+document.getElementById('modeChallenge').addEventListener('click',()=>setMode('challenge'));
+function setMode(m){
+  S.mode=m;
+  document.getElementById('modeSandbox').classList.toggle('on', m==='sandbox');
+  document.getElementById('modeChallenge').classList.toggle('on', m==='challenge');
+  panel.classList.toggle('open', m==='challenge');
+  document.getElementById('motorCtl').style.display = m==='sandbox' ? 'flex':'none';
+  if (m==='sandbox'){ S.revealed=true; S.activeChallenge=null; }
+  else {
+    renderTierList();
+    if (S.activeChallenge) openChallenge(S.activeChallenge.id); else S.revealed=false;
+  }
+  resolve();
+}
+function tierUnlocked(tier){
+  if (S.unlockAll || tier===1) return true;
+  return CHALLENGES.filter(c=>c.tier===tier-1).every(c=>S.completed[c.id]);
+}
+function renderTierList(){
+  const wrap=document.getElementById('chTiers');
+  wrap.innerHTML='';
+  const tiers=[...new Set(CHALLENGES.map(c=>c.tier))];
+  tiers.forEach(t=>{
+    const unlocked=tierUnlocked(t);
+    const div=document.createElement('div'); div.className='tier';
+    const name=CHALLENGES.find(c=>c.tier===t).tierName;
+    div.innerHTML='<div class="tier-h"><span class="lock">'+(unlocked?'':'🔒')+'</span>Tier '+t+' — '+name+'</div>';
+    CHALLENGES.filter(c=>c.tier===t).forEach(c=>{
+      const b=document.createElement('button');
+      b.className='chbtn'+(S.completed[c.id]?' done':'')+(S.activeChallenge&&S.activeChallenge.id===c.id?' active':'');
+      b.disabled=!unlocked;
+      b.innerHTML='<span>'+c.id+' · '+c.title+'</span><span class="tick">'+(S.completed[c.id]?'✓':'')+'</span>';
+      b.addEventListener('click',()=>openChallenge(c.id));
+      div.appendChild(b);
+    });
+    wrap.appendChild(div);
+  });
+}
+let pred={rpm:'',torque:'',dir:null};
+function openChallenge(id){
+  const ch=CHALLENGES.find(c=>c.id===id); if(!ch) return;
+  S.activeChallenge=ch;
+  S.motorSpecs={rpm:ch.motor.rpm, torque:ch.motor.torque};
+  S.revealed=false; S.lastRun=null;
+  pred={rpm:'',torque:'',dir:null};
+  if (!S.attempts[id]) S.attempts[id]=0;
+  renderTierList();
+  renderChallengeDetail();
+  resolve();
+}
+function renderChallengeDetail(){
+  const ch=S.activeChallenge;
+  const d=document.getElementById('chDetail');
+  if (!ch){ d.innerHTML='<p style="font-size:12.5px;color:var(--ink-soft)">Select a challenge to begin.</p>'; return; }
+  const cons=[];
+  if (ch.constraints.maxTeeth) cons.push('max gear '+ch.constraints.maxTeeth+'T');
+  if (ch.constraints.maxGears) cons.push('≤ '+ch.constraints.maxGears+' gears');
+  if (ch.constraints.minGears) cons.push('≥ '+ch.constraints.minGears+' gears');
+  d.innerHTML =
+    '<h3>'+ch.id+' · '+ch.title+'</h3>'+
+    '<p class="scenario">'+ch.scenario+'</p>'+
+    '<div class="given">GIVEN — Motor: '+ch.motor.rpm+' RPM CW · '+ch.motor.torque+' N·cm'+
+      (ch.allowed? '<br>Gears available: '+ch.allowed.map(t=>t+'T').join(', '):'')+
+      (cons.length? '<br>Constraints: '+cons.join(' · '):'')+'</div>'+
+    '<div class="predbox"><h4>Your prediction (required to run)</h4>'+
+      '<div class="predrow"><label>Output RPM</label><input id="predRpm" type="number" step="any" inputmode="decimal"></div>'+
+      '<div class="predrow"><label>Output N·cm</label><input id="predTorque" type="number" step="any" inputmode="decimal"></div>'+
+      '<div class="predrow"><label>Direction</label><div class="dirbtns"><button id="predCW">CW</button><button id="predCCW">CCW</button></div></div>'+
+    '</div>'+
+    '<button id="runBtn" disabled>Run train</button>'+
+    '<div id="chResult"></div>'+
+    '<div id="chAttempts">Attempts: '+S.attempts[ch.id]+'</div>';
+  const rIn=document.getElementById('predRpm'), tIn=document.getElementById('predTorque');
+  rIn.value=pred.rpm; tIn.value=pred.torque;
+  rIn.addEventListener('input',()=>{pred.rpm=rIn.value; updateRunBtn();});
+  tIn.addEventListener('input',()=>{pred.torque=tIn.value; updateRunBtn();});
+  const cwB=document.getElementById('predCW'), ccwB=document.getElementById('predCCW');
+  function setDir(x){ pred.dir=x; cwB.classList.toggle('on',x==='CW'); ccwB.classList.toggle('on',x==='CCW'); updateRunBtn(); }
+  cwB.addEventListener('click',()=>setDir('CW'));
+  ccwB.addEventListener('click',()=>setDir('CCW'));
+  if (pred.dir) setDir(pred.dir);
+  document.getElementById('runBtn').addEventListener('click',runChallenge);
+  updateRunBtn();
+}
+function updateRunBtn(){
+  const b=document.getElementById('runBtn'); if(!b) return;
+  const ready = pred.rpm!=='' && pred.torque!=='' && pred.dir;
+  b.disabled=!ready;
+}
+function runChallenge(){
+  const ch=S.activeChallenge; if(!ch) return;
+  S.attempts[ch.id]++;
+  S.revealed=true;
+  resolve();
+  const st={gears:S.gears, shafts:S.shafts,
+    motor:S.motor?{shaftId:S.motor.shaftId,rpm:S.motorSpecs.rpm,torque:S.motorSpecs.torque}:null,
+    load:S.load};
+  const sv=solve(st);
+  const p={rpm:Number(pred.rpm), torque:Number(pred.torque), dir:pred.dir};
+  const ev=evaluateChallenge(ch, st, sv, p);
+  S.lastRun={pred:p, actual:sv.out, eval:ev, challengeId:ch.id, challengeTitle:ch.id+' · '+ch.title};
+  if (ev.pass){ S.completed[ch.id]=true; renderTierList(); }
+  // results table
+  const res=document.getElementById('chResult');
+  const a=sv.out;
+  function row(label,pv,av,ok){
+    return '<tr><td>'+label+'</td><td>'+pv+'</td><td>'+(av==null?'—':av)+'</td><td class="'+(ok?'ok':'bad')+'">'+(ok?'✓':'✗')+'</td></tr>';
+  }
+  let rows='';
+  if (a){
+    const tol=(ch.target.tolPct!=null?ch.target.tolPct:2)/100;
+    const within=(x,y)=>Math.abs(x-y)<=Math.abs(y)*tol+1e-9;
+    rows = row('RPM', fmtNum(p.rpm), fmtNum(a.rpm), within(p.rpm,a.rpm))
+         + row('Torque', fmtNum(p.torque), fmtNum(a.torque), within(p.torque,a.torque))
+         + row('Direction', p.dir, a.dir, p.dir===a.dir);
+  }
+  res.style.display='block';
+  res.innerHTML =
+    '<table><tr><th></th><th>Predicted</th><th>Actual</th><th></th></tr>'+rows+'</table>'+
+    (ev.problems.length? '<div id="chProblems">'+ev.problems.map(x=>'• '+x).join('<br>')+'</div>':'')+
+    '<div class="verdict '+(ev.pass?'pass':'fail')+'">'+(ev.pass?'PASS — CHALLENGE COMPLETE':(ev.targetOk&&!ev.predOk?'TRAIN WORKS — PREDICTION OFF':'NOT YET'))+'</div>';
+  document.getElementById('chAttempts').textContent='Attempts: '+S.attempts[ch.id];
+  const stamp=document.getElementById('droStamp');
+  stamp.style.display='flex';
+  stamp.textContent=ev.pass?'PASS':'RETRY';
+  stamp.classList.toggle('fail', !ev.pass);
+  setTimeout(()=>{stamp.style.display='none';}, 4000);
+}
+
+/* =====================================================================
+   EXPORTS
+   ===================================================================== */
+function snapshotDataURL(scale){
+  const off=document.createElement('canvas');
+  off.width=CW*(scale||1); off.height=CH*(scale||1);
+  const c=off.getContext('2d');
+  c.scale(scale||1, scale||1);
+  drawScene(c, CW, CH, solved, {reveal:true});
+  return off.toDataURL('image/png');
+}
+function titleLines(){
+  const name=document.getElementById('studentName').value.trim()||'(unnamed)';
+  const date=new Date().toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+  const mode=S.mode==='challenge'&&S.activeChallenge? 'Challenge '+S.activeChallenge.id+' — '+S.activeChallenge.title : 'Sandbox';
+  return {name,date,mode};
+}
+document.getElementById('btnPng').addEventListener('click',()=>{
+  const pad=24, headH=86, footH=(S.lastRun?120:70);
+  const W=Math.max(900,CW+pad*2), H=headH+CH+footH+pad;
+  const off=document.createElement('canvas'); off.width=W; off.height=H;
+  const c=off.getContext('2d');
+  c.fillStyle='#FFFFFF'; c.fillRect(0,0,W,H);
+  c.strokeStyle='#23272C'; c.lineWidth=2; c.strokeRect(8,8,W-16,H-16);
+  const t=titleLines();
+  c.fillStyle='#23272C';
+  c.font='700 20px "Avenir Next","Segoe UI",sans-serif';
+  c.fillText('GEAR TRAIN WORKBENCH', pad, 40);
+  c.font='12px "Avenir Next","Segoe UI",sans-serif';
+  c.fillText('Name: '+t.name+'    Date: '+t.date+'    Mode: '+t.mode, pad, 62);
+  c.strokeStyle='#B9B6AA'; c.lineWidth=1; c.beginPath(); c.moveTo(pad,72); c.lineTo(W-pad,72); c.stroke();
+  const img=new Image();
+  img.onload=()=>{
+    c.drawImage(img, pad, headH, CW, CH);
+    let y=headH+CH+26;
+    c.font='600 14px ui-monospace,Consolas,monospace'; c.fillStyle='#23272C';
+    if (solved&&solved.out){
+      c.fillText('RATIO '+solved.ratioText+'    OUT '+fmtNum(solved.out.rpm)+' RPM    '+fmtNum(solved.out.torque)+' N·cm    DIR '+solved.out.dir, pad, y);
+      y+=22;
+    }
+    if (S.lastRun&&S.lastRun.actual){
+      c.font='12px ui-monospace,Consolas,monospace';
+      c.fillText('Predicted: '+fmtNum(S.lastRun.pred.rpm)+' RPM, '+fmtNum(S.lastRun.pred.torque)+' N·cm, '+S.lastRun.pred.dir+
+                 '   |   Actual: '+fmtNum(S.lastRun.actual.rpm)+' RPM, '+fmtNum(S.lastRun.actual.torque)+' N·cm, '+S.lastRun.actual.dir+
+                 '   |   '+(S.lastRun.eval.pass?'PASS':'RETRY')+'   (attempt '+S.attempts[S.lastRun.challengeId]+')', pad, y);
+    }
+    const a=document.createElement('a');
+    a.download='gear-train-'+t.date.replace(/[ ,]/g,'-')+'.png';
+    a.href=off.toDataURL('image/png');
+    a.click();
+  };
+  img.src=snapshotDataURL(1);
+});
+
+document.getElementById('btnReport').addEventListener('click',()=>{
+  const t=titleLines();
+  const img=snapshotDataURL(1);
+  let gearRows='';
+  S.shafts.forEach((s,i)=>{
+    gearsOn(s.id).forEach(g=>{
+      const isM=S.motor&&S.motor.shaftId===s.id, isL=S.load&&S.load.shaftId===s.id;
+      gearRows+='<tr><td>Shaft '+(i+1)+(isM?' (motor)':'')+(isL?' (load)':'')+'</td><td>'+g.teeth+'T</td><td>'+(((g.layer||0)===0)?'Front':'Back')+'</td>'+
+        '<td>'+(solved&&solved.shaftRpm[s.id]!=null? fmtNum(Math.abs(solved.shaftRpm[s.id]))+' RPM '+(solved.shaftRpm[s.id]>0?'CW':'CCW'):'—')+'</td></tr>';
+    });
+  });
+  let predBlock='';
+  if (S.lastRun&&S.lastRun.actual){
+    predBlock='<h1 style="font-size:13px;margin-top:14px">Prediction vs. actual — '+S.lastRun.challengeTitle+' (attempt '+S.attempts[S.lastRun.challengeId]+')</h1>'+
+      '<table><tr><th></th><th>Predicted</th><th>Actual</th></tr>'+
+      '<tr><td>Output speed</td><td>'+fmtNum(S.lastRun.pred.rpm)+' RPM</td><td>'+fmtNum(S.lastRun.actual.rpm)+' RPM</td></tr>'+
+      '<tr><td>Output torque</td><td>'+fmtNum(S.lastRun.pred.torque)+' N·cm</td><td>'+fmtNum(S.lastRun.actual.torque)+' N·cm</td></tr>'+
+      '<tr><td>Direction</td><td>'+S.lastRun.pred.dir+'</td><td>'+S.lastRun.actual.dir+'</td></tr></table>'+
+      '<p style="font-size:13px;font-weight:700">Result: '+(S.lastRun.eval.pass?'PASS':'Not passed')+'</p>';
+  }
+  document.getElementById('report').innerHTML =
+    '<div class="rb"><h1>Gear Train Workbench — Work Record</h1>'+
+    '<div class="sub">Engineering Education · Mechanisms & Gear Systems</div>'+
+    '<table><tr><th>Name</th><th>Date</th><th>Mode</th></tr>'+
+    '<tr><td>'+t.name+'</td><td>'+t.date+'</td><td>'+t.mode+'</td></tr></table>'+
+    '<img src="'+img+'">'+
+    '<table><tr><th>Shaft</th><th>Gear</th><th>Plane</th><th>Speed</th></tr>'+gearRows+'</table>'+
+    '<table><tr><th>Motor</th><th>Overall ratio</th><th>Output</th></tr>'+
+    '<tr><td>'+S.motorSpecs.rpm+' RPM · '+S.motorSpecs.torque+' N·cm</td><td>'+(solved?solved.ratioText:'—')+'</td>'+
+    '<td>'+(solved&&solved.out? fmtNum(solved.out.rpm)+' RPM · '+fmtNum(solved.out.torque)+' N·cm · '+solved.out.dir : '—')+'</td></tr></table>'+
+    predBlock+
+    '<div class="sig"><span>Student signature</span><span>Teacher check</span></div></div>';
+  window.print();
+});
+
+document.getElementById('btnSave').addEventListener('click',()=>{
+  const data={version:1, gears:S.gears, shafts:S.shafts.map(s=>({id:s.id,x:s.x,y:s.y})), motor:S.motor, load:S.load, motorSpecs:S.motorSpecs};
+  const a=document.createElement('a');
+  a.download='gear-train-design.json';
+  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(data,null,2));
+  a.click();
+});
+document.getElementById('btnLoad').addEventListener('click',()=>document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change',ev=>{
+  const f=ev.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const d=JSON.parse(rd.result);
+      if (!Array.isArray(d.gears)||!Array.isArray(d.shafts)) throw new Error('bad file');
+      S.gears=d.gears; S.shafts=d.shafts.map(s=>({...s,angle:0}));
+      S.motor=d.motor||null; S.load=d.load||null;
+      if (d.motorSpecs){ S.motorSpecs=d.motorSpecs;
+        document.getElementById('motorRpm').value=S.motorSpecs.rpm;
+        document.getElementById('motorTorque').value=S.motorSpecs.torque; }
+      let maxN=0; [...S.gears,...S.shafts].forEach(o=>{const m=/\d+$/.exec(o.id); if(m) maxN=Math.max(maxN,Number(m[0]));});
+      S.idc=maxN;
+      resolve(); toast('Design loaded.');
+    }catch(e){ toast('Could not read that file.'); }
+  };
+  rd.readAsText(f);
+  ev.target.value='';
+});
+
+/* ---------- Help modal ---------- */
+document.getElementById('btnHelp').addEventListener('click',()=>document.getElementById('modalBack').classList.add('open'));
+document.getElementById('modalClose').addEventListener('click',()=>document.getElementById('modalBack').classList.remove('open'));
+document.getElementById('modalBack').addEventListener('click',ev=>{ if(ev.target.id==='modalBack') ev.target.classList.remove('open'); });
+
+/* ---------- Boot ---------- */
+if (/[?&]unlock=all/.test(location.search)){
+  S.unlockAll=true;
+  document.getElementById('unlockTag').style.display='inline-block';
+}
+resize();
+resolve();
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
