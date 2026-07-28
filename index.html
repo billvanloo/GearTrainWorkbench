@@ -26,25 +26,26 @@
   .titleblock .t1{font-size:15px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
   .titleblock .t2{font-size:10px;letter-spacing:.08em;color:var(--ink-soft);text-transform:uppercase}
   .modes{display:flex;border:1.5px solid var(--ink);border-radius:3px;overflow:hidden}
-  .modes button{font:600 12px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;padding:7px 14px;border:none;background:transparent;color:var(--ink);cursor:pointer}
+  .modes button{font:600 14px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;padding:7px 14px;border:none;background:transparent;color:var(--ink);cursor:pointer}
   .modes button.on{background:var(--ink);color:var(--paper)}
   .spacer{flex:1}
-  .namewrap{display:flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)}
-  .namewrap input{font:14px var(--font-ui);border:none;border-bottom:1.5px solid var(--ink);background:transparent;padding:3px 4px;width:150px;outline:none}
+  .namewrap{display:flex;align-items:center;gap:6px;font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)}
+  .namewrap input{font:15px var(--font-ui);border:none;border-bottom:1.5px solid var(--ink);background:transparent;padding:3px 4px;width:150px;outline:none}
   .hbtns{display:flex;gap:6px;flex-wrap:wrap}
-  .hbtns button{font:600 11px var(--font-ui);letter-spacing:.05em;padding:7px 10px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);border-radius:3px;cursor:pointer}
+  .hbtns button{font:600 13px var(--font-ui);letter-spacing:.05em;padding:7px 10px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);border-radius:3px;cursor:pointer}
   .hbtns button:hover{background:var(--ink);color:var(--paper)}
   #unlockTag{display:none;font:600 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--fail);border:1px solid var(--fail);border-radius:3px;padding:3px 7px}
 
   /* ---------- Main layout ---------- */
   main{flex:1;display:flex;min-height:0}
-  #palette{width:118px;border-right:1.5px solid var(--line);padding:10px 8px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;background:#F1EFE8}
-  .pal-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin:6px 0 2px}
-  .gchip{display:flex;align-items:center;gap:8px;border:1.5px solid var(--steel-edge);background:#fff;border-radius:4px;padding:6px 8px;cursor:pointer;font:600 13px var(--font-mono)}
+  #palette{width:180px;border-right:1.5px solid var(--line);padding:10px 8px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;background:#F1EFE8}
+  .pal-label{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin:6px 0 2px}
+  #gearChips{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .gchip{display:flex;align-items:center;justify-content:center;gap:6px;border:1.5px solid var(--steel-edge);background:#fff;border-radius:4px;padding:7px 4px;cursor:pointer;font:600 16px var(--font-mono);touch-action:none}
   .gchip svg{flex:none}
   .gchip:hover{border-color:var(--dykem);background:var(--dykem-soft)}
   .gchip.armed{border-color:var(--dykem);background:var(--dykem);color:#fff}
-  .toolbtn{border:1.5px solid var(--ink);background:#fff;border-radius:4px;padding:7px 8px;cursor:pointer;font:600 11px var(--font-ui);letter-spacing:.04em;text-transform:uppercase;text-align:left}
+  .toolbtn{border:1.5px solid var(--ink);background:#fff;border-radius:4px;padding:8px 10px;cursor:pointer;font:600 14px var(--font-ui);letter-spacing:.04em;text-transform:uppercase;text-align:left;touch-action:none}
   .toolbtn:hover{background:var(--ink);color:#fff}
   .toolbtn.armed{background:var(--ink);color:#fff}
   .toolbtn.motor{border-color:var(--brass);color:var(--brass)}
@@ -53,15 +54,15 @@
   .toolbtn.load.armed,.toolbtn.load:hover{background:var(--dykem);color:#fff}
   .toolbtn.danger{border-color:var(--fail);color:var(--fail)}
   .toolbtn.danger:hover{background:var(--fail);color:#fff}
-  .palctl{font-size:10px;color:var(--ink-soft);letter-spacing:.05em;text-transform:uppercase;margin-top:8px}
+  .palctl{font-size:12px;color:var(--ink-soft);letter-spacing:.05em;text-transform:uppercase;margin-top:8px}
   .palctl input[type=range]{width:100%}
-  .palctl label{display:flex;align-items:center;gap:5px;font-size:11px;text-transform:none;letter-spacing:0;color:var(--ink);margin-top:4px}
+  .palctl label{display:flex;align-items:center;gap:5px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--ink);margin-top:4px}
 
   #stage{flex:1;display:flex;flex-direction:column;min-width:0}
   #canvasWrap{flex:1;position:relative;min-height:0}
   canvas#board{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
-  #hint{position:absolute;left:12px;top:10px;font:11px var(--font-ui);letter-spacing:.04em;color:var(--ink-soft);background:rgba(246,245,240,.85);padding:4px 8px;border-radius:3px;pointer-events:none}
-  #toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:var(--ink);color:var(--paper);font:12px var(--font-ui);padding:7px 14px;border-radius:4px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:80%}
+  #hint{position:absolute;left:12px;top:10px;font:16px/1.45 var(--font-ui);letter-spacing:.02em;color:var(--ink-soft);background:rgba(246,245,240,.9);padding:6px 10px;border-radius:3px;pointer-events:none;max-width:min(560px,80%)}
+  #toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:var(--ink);color:var(--paper);font:14px var(--font-ui);padding:7px 14px;border-radius:4px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:80%}
 
   /* ---------- DRO readout bar (signature element) ---------- */
   #dro{display:flex;align-items:stretch;gap:0;background:var(--dro-bg);border-top:3px solid var(--ink);padding:8px 12px;flex-wrap:wrap}
@@ -76,26 +77,26 @@
   .dro-stamp.fail{border-color:var(--fail);color:#FF8A6B}
 
   /* ---------- Challenge panel ---------- */
-  #challengePanel{width:320px;border-left:1.5px solid var(--line);background:#F1EFE8;display:none;flex-direction:column;min-height:0}
+  #challengePanel{width:350px;border-left:1.5px solid var(--line);background:#F1EFE8;display:none;flex-direction:column;min-height:0}
   #challengePanel.open{display:flex}
   #chTiers{padding:10px 12px;border-bottom:1.5px solid var(--line);overflow-y:auto;max-height:38%}
   .tier{margin-bottom:8px}
   .tier-h{font:700 11px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);display:flex;align-items:center;gap:6px;margin-bottom:4px}
   .tier-h .lock{font-size:11px}
-  .chbtn{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;font:600 12px var(--font-ui);padding:6px 9px;margin-bottom:3px;border:1.5px solid var(--line);border-radius:3px;background:#fff;cursor:pointer}
+  .chbtn{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;font:600 13.5px var(--font-ui);padding:6px 9px;margin-bottom:3px;border:1.5px solid var(--line);border-radius:3px;background:#fff;cursor:pointer}
   .chbtn:hover{border-color:var(--dykem)}
   .chbtn.active{border-color:var(--dykem);background:var(--dykem-soft)}
   .chbtn.done .tick{color:var(--pass);font-weight:700}
   .chbtn:disabled{opacity:.45;cursor:not-allowed}
   #chDetail{flex:1;overflow-y:auto;padding:12px}
-  #chDetail h3{font-size:14px;letter-spacing:.02em;margin-bottom:6px}
-  #chDetail .scenario{font-size:12.5px;line-height:1.5;margin-bottom:10px}
-  .given{font:12px var(--font-mono);background:#fff;border:1px solid var(--line);border-left:3px solid var(--brass);padding:7px 9px;margin-bottom:10px;line-height:1.6}
+  #chDetail h3{font-size:16px;letter-spacing:.02em;margin-bottom:6px}
+  #chDetail .scenario{font-size:14px;line-height:1.5;margin-bottom:10px}
+  .given{font:13px var(--font-mono);background:#fff;border:1px solid var(--line);border-left:3px solid var(--brass);padding:7px 9px;margin-bottom:10px;line-height:1.6}
   .predbox{border:1.5px solid var(--ink);border-radius:4px;background:#fff;padding:10px;margin-bottom:10px}
   .predbox h4{font:700 10px var(--font-ui);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
   .predrow{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-  .predrow label{font-size:12px;width:92px}
-  .predrow input{font:14px var(--font-mono);width:90px;padding:5px 7px;border:1.5px solid var(--steel-edge);border-radius:3px}
+  .predrow label{font-size:14px;width:100px}
+  .predrow input{font:15px var(--font-mono);width:90px;padding:5px 7px;border:1.5px solid var(--steel-edge);border-radius:3px}
   .dirbtns{display:flex;gap:5px}
   .dirbtns button{font:600 12px var(--font-mono);padding:5px 12px;border:1.5px solid var(--steel-edge);border-radius:3px;background:#fff;cursor:pointer}
   .dirbtns button.on{border-color:var(--dykem);background:var(--dykem);color:#fff}
@@ -114,15 +115,15 @@
   .verdict.fail{border:2px solid var(--fail);color:var(--fail)}
 
   /* ---------- Sandbox motor controls ---------- */
-  #motorCtl{display:flex;gap:10px;align-items:center;padding:6px 12px;border-top:1.5px solid var(--line);background:#F1EFE8;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)}
-  #motorCtl input{font:13px var(--font-mono);width:64px;padding:3px 6px;border:1.5px solid var(--steel-edge);border-radius:3px}
+  #motorCtl{display:flex;gap:10px;align-items:center;padding:6px 12px;border-top:1.5px solid var(--line);background:#F1EFE8;font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)}
+  #motorCtl input{font:14px var(--font-mono);width:70px;padding:3px 6px;border:1.5px solid var(--steel-edge);border-radius:3px}
 
   /* ---------- Modal ---------- */
   #modalBack{position:fixed;inset:0;background:rgba(35,39,44,.5);display:none;align-items:center;justify-content:center;z-index:50}
   #modalBack.open{display:flex}
   #modal{background:var(--paper);border:2px solid var(--ink);border-radius:5px;max-width:560px;width:92%;max-height:84vh;overflow-y:auto;padding:22px}
   #modal h2{font-size:16px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
-  #modal p,#modal li{font-size:13.5px;line-height:1.6;margin-bottom:8px}
+  #modal p,#modal li{font-size:15px;line-height:1.6;margin-bottom:8px}
   #modal ul{padding-left:20px;margin-bottom:10px}
   #modal .close{float:right;font:700 13px var(--font-ui);border:1.5px solid var(--ink);background:none;border-radius:3px;padding:5px 12px;cursor:pointer}
   kbd{font:11px var(--font-mono);border:1px solid var(--steel-edge);border-bottom-width:2px;border-radius:3px;padding:1px 5px;background:#fff}
@@ -145,8 +146,8 @@
   }
 
   @media (max-width:860px){
-    #palette{width:96px}
-    #challengePanel{width:270px}
+    #palette{width:150px}
+    #challengePanel{width:300px}
     .dro-cell{min-width:96px}
     .dro-val{font-size:17px}
   }
@@ -184,6 +185,7 @@
     <button class="toolbtn motor" id="toolMotor">⚙ Motor</button>
     <button class="toolbtn load" id="toolLoad">◎ Load</button>
     <button class="toolbtn danger" id="toolDelete">✕ Remove</button>
+    <button class="toolbtn" id="toolUndo" title="Undo the last change (Ctrl/Cmd+Z)">↩ Undo</button>
     <button class="toolbtn" id="toolClear">Clear all</button>
     <div class="palctl">
       Animation speed
@@ -196,7 +198,7 @@
   <div id="stage">
     <div id="canvasWrap">
       <canvas id="board"></canvas>
-      <div id="hint">Tap a gear size, then tap the sheet to place it. Drag gears near each other to snap into mesh; drop one on a hub to stack it (compound).</div>
+      <div id="hint">Tap a gear size then tap the sheet — or drag a size straight onto the sheet. Drag gears near each other to snap into mesh; drop one on a hub to stack it (compound).</div>
       <div id="toast"></div>
     </div>
     <div id="motorCtl">
@@ -224,8 +226,8 @@
   <div id="modal">
     <button class="close" id="modalClose">Close</button>
     <h2>How to use the workbench</h2>
-    <p><strong>Build:</strong> tap a gear size in the palette, then tap the sheet. Drag gears near each other and they snap into mesh. Drop a gear onto another gear's hub to stack it on the same shaft — that's a <em>compound</em> pair (the second gear sits on the back plane, drawn darker).</p>
-    <p><strong>Power it:</strong> choose the Motor tool and tap a gear to attach the motor. Do the same with the Load tool where you want to measure output.</p>
+    <p><strong>Build:</strong> tap a gear size in the palette then tap the sheet, or drag a size straight onto the sheet. Drag gears near each other and they snap into mesh. Drop a gear onto another gear's hub to stack it on the same shaft — that's a <em>compound</em> pair, shown with the largest gear behind and the smallest in front. A shaft holds at most two gears.</p>
+    <p><strong>Power it:</strong> choose the Motor tool and tap a gear to attach the motor — or drag the Motor button straight onto a gear. Do the same with the Load tool where you want to measure output.</p>
     <p><strong>Read it:</strong> the amber readout shows overall ratio, output speed, output torque, and direction. CW = clockwise.</p>
     <ul>
       <li>Meshed gears turn opposite directions; gears on one shaft turn together.</li>
@@ -233,7 +235,8 @@
       <li>Gears only mesh within the same plane. Front-plane gears are light; back-plane gears are darker.</li>
     </ul>
     <p><strong>Challenge mode:</strong> build the train, then enter your <em>predicted</em> output before you run. The workbench compares your prediction to the actual result — calculate first, then check.</p>
-    <p><strong>Keys:</strong> <kbd>Delete</kbd> removes the selected gear. <kbd>Esc</kbd> cancels a tool.</p>
+    <p><strong>Remove &amp; undo:</strong> with the Remove tool, tap a gear to delete it, or tap an <em>M</em>/<em>L</em> badge to detach the motor or load. Undo (or <kbd>Ctrl/⌘ Z</kbd>) reverses the last change.</p>
+    <p><strong>Keys:</strong> <kbd>Delete</kbd> removes the selected gear. <kbd>Ctrl/⌘ Z</kbd> undoes. <kbd>Esc</kbd> cancels a tool.</p>
   </div>
 </div>
 
@@ -403,6 +406,8 @@ const S = {
   placingTeeth:null,
   selectedGear:null,
   drag:null,                         // {gearId, wholeShaft, offX, offY, snap}
+  palDrag:null,                      // {teeth, x, y, snap} — chip dragged from palette
+  toolDrag:null,                     // {kind:'motor'|'load', x, y} — tool dragged from palette
   speed:0.2, showArrows:true, showLabels:true,
   unlockAll:false,
   idc:0
@@ -458,8 +463,14 @@ function gearPath(c, r, teeth, angle){
 function drawScene(c, w, h, solved, opts){
   opts = opts || {};
   drawGrid(c, w, h);
-  // Back layer first, then front, so front reads on top
-  const order = S.gears.slice().sort((a,b)=>(b.layer||0)-(a.layer||0));
+  // Back plane first across shafts; within a shaft always big-before-small so
+  // both gears of a compound pair stay visible (largest behind, smallest in front).
+  const shaftMaxLayer = {};
+  S.gears.forEach(g=>{ const l=g.layer||0; if (!(g.shaftId in shaftMaxLayer) || l>shaftMaxLayer[g.shaftId]) shaftMaxLayer[g.shaftId]=l; });
+  const order = S.gears.slice().sort((a,b)=>
+    (shaftMaxLayer[b.shaftId]-shaftMaxLayer[a.shaftId]) ||
+    (a.shaftId<b.shaftId?-1:a.shaftId>b.shaftId?1:0) ||
+    (b.teeth-a.teeth));
   for (const g of order){
     const s = shaftById(g.shaftId); if (!s) continue;
     const r = pitchRadius(g.teeth);
@@ -486,12 +497,15 @@ function drawScene(c, w, h, solved, opts){
       const a=(s.angle||0)+k*Math.PI*2/3;
       c.beginPath(); c.moveTo(Math.cos(a)*r*0.25, Math.sin(a)*r*0.25); c.lineTo(Math.cos(a)*r*0.72, Math.sin(a)*r*0.72); c.stroke();
     }
-    // tooth label
+    // tooth label — the larger gear of a compound pair gets its label near the
+    // rim so it isn't covered by the smaller gear drawn in front of it
     if (S.showLabels){
+      const mate = S.gears.find(o=>o.shaftId===g.shaftId && o.id!==g.id);
+      const ly = (mate && mate.teeth < g.teeth) ? -r*0.8 : -r*0.5;
       c.fillStyle = '#23272C';
       c.font = '600 '+Math.max(10, Math.min(14, r*0.32))+'px ui-monospace, Consolas, monospace';
       c.textAlign='center'; c.textBaseline='middle';
-      c.fillText(g.teeth+'T', 0, back? r*0.5 : -r*0.5);
+      c.fillText(g.teeth+'T', 0, ly);
     }
     c.restore();
   }
@@ -503,10 +517,6 @@ function drawScene(c, w, h, solved, opts){
     c.fillStyle='#F6F5F0'; c.fill();
     c.lineWidth=2; c.strokeStyle='#23272C'; c.stroke();
     c.beginPath(); c.arc(0,0,2.2,0,Math.PI*2); c.fillStyle='#23272C'; c.fill();
-    if (gl.length===2){ // compound tag
-      c.font='700 9px ui-monospace, Consolas, monospace'; c.fillStyle='#5A6068';
-      c.textAlign='center'; c.fillText('×2', 0, 16);
-    }
     const isM = S.motor && S.motor.shaftId===s.id;
     const isL = S.load && S.load.shaftId===s.id;
     if (isM || isL){
@@ -547,9 +557,43 @@ function drawScene(c, w, h, solved, opts){
     }
     c.restore();
   }
+  // tool-drag ghost badge (motor/load)
+  if (S.toolDrag){
+    const t = S.toolDrag;
+    const g = hitGear({x:t.x, y:t.y});
+    const hub = g ? shaftById(g.shaftId) : hitHub({x:t.x, y:t.y});
+    const col = t.kind==='motor' ? '#B08A2E' : '#1D5FA8';
+    c.save();
+    if (hub){
+      c.strokeStyle=col; c.lineWidth=2; c.setLineDash([5,4]);
+      c.beginPath(); c.arc(hub.x, hub.y, 16, 0, Math.PI*2); c.stroke();
+      c.setLineDash([]);
+    }
+    c.globalAlpha=.85;
+    c.beginPath(); c.arc(t.x, t.y, 12, 0, Math.PI*2);
+    c.fillStyle=col; c.fill();
+    c.lineWidth=1.5; c.strokeStyle='#F6F5F0'; c.stroke();
+    c.fillStyle='#fff'; c.font='700 12px ui-monospace, Consolas, monospace';
+    c.textAlign='center'; c.textBaseline='middle';
+    c.fillText(t.kind==='motor' ? 'M' : 'L', t.x, t.y);
+    c.restore();
+  }
+  // palette-drag ghost gear
+  if (S.palDrag){
+    const pd = S.palDrag;
+    const pos = (pd.snap && pd.snap.type==='mesh') ? {x:pd.snap.x, y:pd.snap.y} : {x:pd.x, y:pd.y};
+    c.save();
+    c.globalAlpha = 0.55;
+    c.translate(pos.x, pos.y);
+    gearPath(c, pitchRadius(pd.teeth), pd.teeth, 0);
+    c.fillStyle = '#DCE1E6'; c.fill();
+    c.lineWidth = 1.6; c.strokeStyle = '#1D5FA8'; c.stroke();
+    c.restore();
+  }
   // snap preview
-  if (S.drag && S.drag.snap){
-    const sn = S.drag.snap;
+  const activeSnap = (S.drag && S.drag.snap) || (S.palDrag && S.palDrag.snap);
+  if (activeSnap){
+    const sn = activeSnap;
     c.save();
     c.strokeStyle='#1D5FA8'; c.lineWidth=2; c.setLineDash([5,4]);
     if (sn.type==='mesh'){
@@ -630,12 +674,23 @@ function canvasPos(ev){
   return {x:ev.clientX-r.left, y:ev.clientY-r.top};
 }
 function hitGear(p){
-  // topmost front-layer first, smaller gears win ties
+  // smallest (topmost-drawn) gear first so users grab what they see;
+  // front plane breaks ties across shafts
   const cands = S.gears
     .map(g=>({g, s:shaftById(g.shaftId), r:pitchRadius(g.teeth)+5}))
     .filter(o=>o.s && dist(p,o.s)<=o.r)
-    .sort((a,b)=>((a.g.layer||0)-(b.g.layer||0)) || (a.r-b.r));
+    .sort((a,b)=>(a.r-b.r) || ((a.g.layer||0)-(b.g.layer||0)));
   return cands.length? cands[0].g : null;
+}
+function hitBadge(p){
+  // mirrors the badge positions in drawScene: M (or a lone L) at (+14,-14), L at (-14,-14) when both
+  for (const s of S.shafts){
+    if (!gearsOn(s.id).length) continue;
+    const isM=S.motor&&S.motor.shaftId===s.id, isL=S.load&&S.load.shaftId===s.id;
+    if (isM && dist(p,{x:s.x+14,y:s.y-14})<=11) return {kind:'motor', shaft:s};
+    if (isL && dist(p,{x:s.x+(isM?-14:14),y:s.y-14})<=11) return {kind:'load', shaft:s};
+  }
+  return null;
 }
 function hitHub(p, excludeShaft){
   for (const s of S.shafts){
@@ -686,15 +741,10 @@ canvas.addEventListener('pointerdown', ev=>{
 
   // Placement mode
   if (S.placingTeeth){
-    const sid=uid('s'); 
-    S.shafts.push({id:sid,x:p.x,y:p.y,angle:0});
-    const g={id:uid('g'), teeth:S.placingTeeth, shaftId:sid, layer:0};
-    if (sameLayerOverlap(g,p)){ S.shafts.pop(); toast('Too close to another gear — pick an open spot.'); return; }
-    S.gears.push(g);
-    S.selectedGear=g.id;
+    placeGearAt(S.placingTeeth, p, null);
     // keep placement armed for quick multi-drop? one at a time keeps it predictable:
     setPlacing(null);
-    resolve(); return;
+    return;
   }
   const g = hitGear(p);
   const hub = (!g) ? hitHub(p) : null;
@@ -703,6 +753,7 @@ canvas.addEventListener('pointerdown', ev=>{
   if (S.tool==='motor' || S.tool==='load'){
     const target = g ? shaftById(g.shaftId) : hub;
     if (target){
+      pushUndo();
       if (S.tool==='motor') S.motor={shaftId:target.id};
       else S.load={shaftId:target.id};
       setTool(null); resolve();
@@ -710,19 +761,26 @@ canvas.addEventListener('pointerdown', ev=>{
     return;
   }
   if (S.tool==='delete'){
-    if (g){ removeGear(g.id); resolve(); }
+    const bdg=hitBadge(p);
+    if (bdg){
+      pushUndo();
+      if (bdg.kind==='motor') S.motor=null; else S.load=null;
+      toast(bdg.kind==='motor' ? 'Motor removed.' : 'Load removed.');
+      resolve(); return;
+    }
+    if (g){ pushUndo(); removeGear(g.id); resolve(); }
     return;
   }
 
   // Drag whole shaft by hub (compound pairs move together)
   if (hub){
-    S.drag={ wholeShaft:hub.id, offX:p.x-hub.x, offY:p.y-hub.y, startX:hub.x, startY:hub.y };
+    S.drag={ wholeShaft:hub.id, offX:p.x-hub.x, offY:p.y-hub.y, startX:hub.x, startY:hub.y, undoSnap:captureState() };
     return;
   }
   if (g){
     S.selectedGear=g.id;
     const s=shaftById(g.shaftId);
-    S.drag={ gearId:g.id, offX:p.x-s.x, offY:p.y-s.y, startX:s.x, startY:s.y, startShaft:g.shaftId, detached:false, snap:null };
+    S.drag={ gearId:g.id, offX:p.x-s.x, offY:p.y-s.y, startX:s.x, startY:s.y, startShaft:g.shaftId, detached:false, snap:null, undoSnap:captureState() };
     return;
   }
   S.selectedGear=null;
@@ -730,6 +788,7 @@ canvas.addEventListener('pointerdown', ev=>{
 
 canvas.addEventListener('pointermove', ev=>{
   if (!S.drag) return;
+  S.drag.moved=true;
   const p=canvasPos(ev);
   if (S.drag.wholeShaft){
     const s=shaftById(S.drag.wholeShaft);
@@ -755,6 +814,7 @@ canvas.addEventListener('pointermove', ev=>{
 canvas.addEventListener('pointerup', ev=>{
   if (!S.drag) return;
   const drag=S.drag; S.drag=null;
+  if (drag.moved && drag.undoSnap) pushUndo(drag.undoSnap);
   if (drag.wholeShaft){ resolve(); return; }
   const g=S.gears.find(x=>x.id===drag.gearId); if(!g){ resolve(); return; }
   const s=shaftById(g.shaftId);
@@ -762,20 +822,99 @@ canvas.addEventListener('pointerup', ev=>{
   if (snap && snap.type==='stack'){
     const target=shaftById(snap.targetShaft);
     const existing=gearsOn(target.id)[0];
-    const newLayer = 1-(existing.layer||0);
     // remove g's own shaft, join target
     const oldShaft=g.shaftId;
-    g.shaftId=target.id; g.layer=newLayer;
+    g.shaftId=target.id;
+    assignStackLayers(existing, g);
     cleanupShaft(oldShaft);
-    toast('Stacked on shared shaft — compound stage. Back-plane gear is drawn darker.');
+    toast('Stacked on shared shaft — compound stage. Largest gear behind, smallest in front.');
   } else if (snap && snap.type==='mesh'){
     g.layer=snap.layer; // adopt the plane of the gear it meshed with
     if (sameLayerOverlap(g,{x:s.x,y:s.y})){ s.x=drag.startX; s.y=drag.startY; toast('That spot collides with another gear on the same plane.'); }
   } else {
-    if (sameLayerOverlap(g,{x:s.x,y:s.y})){ s.x=drag.startX; s.y=drag.startY; toast('That spot collides with another gear on the same plane.'); }
+    const fullHub = hitHub({x:s.x,y:s.y}, g.shaftId);
+    if (fullHub && gearsOn(fullHub.id).length>=2){
+      s.x=drag.startX; s.y=drag.startY;
+      toast('A shaft can hold at most two gears.');
+    } else if (sameLayerOverlap(g,{x:s.x,y:s.y})){ s.x=drag.startX; s.y=drag.startY; toast('That spot collides with another gear on the same plane.'); }
   }
   resolve();
 });
+
+// Plane assignment for a compound pair: largest gear goes to the back plane
+// (drawn darker/behind) unless the existing gear is already meshed — moving a
+// meshed gear to another plane would silently break its mesh.
+function assignStackLayers(existing, added){
+  const meshed = solved && solved.meshes && solved.meshes.some(m=>m[0]===existing.id || m[1]===existing.id);
+  if (!meshed){
+    const big = added.teeth>=existing.teeth ? added : existing;
+    const small = big===added ? existing : added;
+    big.layer=1; small.layer=0;
+  } else {
+    added.layer = 1-(existing.layer||0);
+  }
+}
+
+// Attach the motor or load to whatever gear/hub sits at pos.
+function attachAt(kind, pos){
+  const g=hitGear(pos);
+  const target = g ? shaftById(g.shaftId) : hitHub(pos);
+  if (!target){ toast('Drop the '+kind+' on a gear to attach it.'); return false; }
+  pushUndo();
+  if (kind==='motor') S.motor={shaftId:target.id};
+  else S.load={shaftId:target.id};
+  resolve();
+  return true;
+}
+
+// Create a new shaft+gear at pos (honouring an optional snap from a palette
+// drag). Returns the gear, or null if the spot is taken.
+function placeGearAt(teeth, pos, snap){
+  const undoSnap=captureState();
+  if (snap && snap.type==='stack'){
+    const target=shaftById(snap.targetShaft);
+    const existing=gearsOn(target.id)[0];
+    const g={id:uid('g'), teeth:teeth, shaftId:target.id, layer:0};
+    pushUndo(undoSnap);
+    S.gears.push(g);
+    assignStackLayers(existing, g);
+    S.selectedGear=g.id;
+    toast('Stacked on shared shaft — compound stage. Largest gear behind, smallest in front.');
+    resolve();
+    return g;
+  }
+  if (snap && snap.type==='mesh') pos={x:snap.x, y:snap.y};
+  const sid=uid('s');
+  S.shafts.push({id:sid, x:pos.x, y:pos.y, angle:0});
+  const g={id:uid('g'), teeth:teeth, shaftId:sid, layer:(snap && snap.type==='mesh')? snap.layer : 0};
+  if (sameLayerOverlap(g,pos)){ S.shafts.pop(); toast('Too close to another gear — pick an open spot.'); resolve(); return null; }
+  pushUndo(undoSnap);
+  S.gears.push(g);
+  S.selectedGear=g.id;
+  resolve();
+  return g;
+}
+
+/* ---------- Undo history ---------- */
+const undoStack=[];
+function captureState(){
+  return JSON.stringify({ gears:S.gears, shafts:S.shafts.map(s=>({id:s.id,x:s.x,y:s.y})), motor:S.motor, load:S.load });
+}
+function pushUndo(snap){
+  undoStack.push(snap||captureState());
+  if (undoStack.length>60) undoStack.shift();
+}
+function undo(){
+  const snap=undoStack.pop();
+  if (!snap){ toast('Nothing to undo.'); return; }
+  const d=JSON.parse(snap);
+  S.gears=d.gears;
+  S.shafts=d.shafts.map(s=>({...s, angle:0}));
+  S.motor=d.motor; S.load=d.load;
+  S.selectedGear=null; S.drag=null;
+  resolve();
+  toast('Undone.');
+}
 
 function cleanupShaft(sid){
   if (!gearsOn(sid).length){
@@ -792,6 +931,7 @@ function removeGear(gid){
   cleanupShaft(sid);
 }
 function clearAll(){
+  if (S.gears.length || S.motor || S.load) pushUndo();
   S.gears=[]; S.shafts=[]; S.motor=null; S.load=null; S.selectedGear=null;
   resolve();
 }
@@ -799,8 +939,9 @@ function clearAll(){
 document.addEventListener('keydown', ev=>{
   if (ev.target.tagName==='INPUT') return;
   if (ev.key==='Delete' || ev.key==='Backspace'){
-    if (S.selectedGear){ removeGear(S.selectedGear); resolve(); }
+    if (S.selectedGear){ pushUndo(); removeGear(S.selectedGear); resolve(); }
   }
+  if ((ev.ctrlKey||ev.metaKey) && (ev.key==='z'||ev.key==='Z')){ ev.preventDefault(); undo(); }
   if (ev.key==='Escape'){ setTool(null); setPlacing(null); }
   if (ev.altKey && ev.shiftKey && (ev.key==='U'||ev.key==='u')){
     S.unlockAll=!S.unlockAll;
@@ -827,7 +968,40 @@ PALETTE_TEETH.forEach(t=>{
   const b=document.createElement('button');
   b.className='gchip'; b.innerHTML=gearChipSVG(t)+'<span>'+t+'T</span>';
   b.dataset.teeth=t;
-  b.addEventListener('click',()=>setPlacing(S.placingTeeth===t?null:t));
+  // Tap toggles click-to-place; dragging past a small threshold drags a ghost
+  // gear straight onto the sheet instead.
+  let chipDrag=null;
+  b.addEventListener('pointerdown', ev=>{
+    ev.preventDefault();
+    b.setPointerCapture(ev.pointerId);
+    chipDrag={startX:ev.clientX, startY:ev.clientY, active:false};
+  });
+  b.addEventListener('pointermove', ev=>{
+    if (!chipDrag) return;
+    if (!chipDrag.active){
+      if (Math.hypot(ev.clientX-chipDrag.startX, ev.clientY-chipDrag.startY) <= 6) return;
+      chipDrag.active=true; setPlacing(null); setTool(null);
+    }
+    const r=canvas.getBoundingClientRect();
+    const x=ev.clientX-r.left, y=ev.clientY-r.top;
+    if (x>=0 && y>=0 && x<=r.width && y<=r.height){
+      const tmp={id:'__pal', teeth:t, shaftId:'__palShaft', layer:0};
+      S.palDrag={teeth:t, x, y, snap:computeSnap(tmp,{x,y})};
+    } else {
+      S.palDrag=null;
+    }
+  });
+  const endChipDrag=ev=>{
+    const cd=chipDrag; chipDrag=null;
+    if (cd && cd.active){
+      const pd=S.palDrag; S.palDrag=null;
+      if (pd && ev.type==='pointerup') placeGearAt(pd.teeth, {x:pd.x,y:pd.y}, pd.snap);
+    } else if (ev.type==='pointerup'){
+      setPlacing(S.placingTeeth===t?null:t);
+    }
+  };
+  b.addEventListener('pointerup', endChipDrag);
+  b.addEventListener('pointercancel', endChipDrag);
   chipWrap.appendChild(b);
 });
 function setPlacing(teeth){
@@ -843,9 +1017,41 @@ function setTool(t){
   document.getElementById('toolLoad').classList.toggle('armed', S.tool==='load');
   document.getElementById('toolDelete').classList.toggle('armed', S.tool==='delete');
 }
-document.getElementById('toolMotor').addEventListener('click',()=>setTool('motor'));
-document.getElementById('toolLoad').addEventListener('click',()=>setTool('load'));
+// Motor/Load: tap toggles the click-to-attach tool; dragging past a small
+// threshold carries a ghost badge onto the sheet and attaches on drop.
+function makeToolDraggable(btn, kind){
+  let td=null;
+  btn.addEventListener('pointerdown', ev=>{
+    ev.preventDefault();
+    btn.setPointerCapture(ev.pointerId);
+    td={startX:ev.clientX, startY:ev.clientY, active:false};
+  });
+  btn.addEventListener('pointermove', ev=>{
+    if (!td) return;
+    if (!td.active){
+      if (Math.hypot(ev.clientX-td.startX, ev.clientY-td.startY) <= 6) return;
+      td.active=true; setPlacing(null); setTool(null);
+    }
+    const r=canvas.getBoundingClientRect();
+    const x=ev.clientX-r.left, y=ev.clientY-r.top;
+    S.toolDrag = (x>=0 && y>=0 && x<=r.width && y<=r.height) ? {kind, x, y} : null;
+  });
+  const end=ev=>{
+    const cd=td; td=null;
+    if (cd && cd.active){
+      const t=S.toolDrag; S.toolDrag=null;
+      if (t && ev.type==='pointerup') attachAt(kind, {x:t.x, y:t.y});
+    } else if (ev.type==='pointerup'){
+      setTool(kind);
+    }
+  };
+  btn.addEventListener('pointerup', end);
+  btn.addEventListener('pointercancel', end);
+}
+makeToolDraggable(document.getElementById('toolMotor'), 'motor');
+makeToolDraggable(document.getElementById('toolLoad'), 'load');
 document.getElementById('toolDelete').addEventListener('click',()=>setTool('delete'));
+document.getElementById('toolUndo').addEventListener('click',undo);
 document.getElementById('toolClear').addEventListener('click',()=>{ if(confirm('Clear the whole sheet?')) clearAll(); });
 document.getElementById('speedSlider').addEventListener('input',e=>S.speed=Number(e.target.value));
 document.getElementById('arrowsChk').addEventListener('change',e=>S.showArrows=e.target.checked);
@@ -870,6 +1076,7 @@ function setMode(m){
     renderTierList();
     if (S.activeChallenge) openChallenge(S.activeChallenge.id); else S.revealed=false;
   }
+  resize(); // panel/motor-bar toggle changes canvas size without a window resize
   resolve();
 }
 function tierUnlocked(tier){
@@ -1091,6 +1298,9 @@ document.getElementById('fileInput').addEventListener('change',ev=>{
     try{
       const d=JSON.parse(rd.result);
       if (!Array.isArray(d.gears)||!Array.isArray(d.shafts)) throw new Error('bad file');
+      const perShaft={}; d.gears.forEach(g=>{ perShaft[g.shaftId]=(perShaft[g.shaftId]||0)+1; });
+      if (Object.values(perShaft).some(n=>n>2)){ toast('Not loaded — a shaft in that file holds more than two gears.'); return; }
+      pushUndo();
       S.gears=d.gears; S.shafts=d.shafts.map(s=>({...s,angle:0}));
       S.motor=d.motor||null; S.load=d.load||null;
       if (d.motorSpecs){ S.motorSpecs=d.motorSpecs;
@@ -1116,6 +1326,10 @@ if (/[?&]unlock=all/.test(location.search)){
   document.getElementById('unlockTag').style.display='inline-block';
 }
 resize();
+// Layout changes (challenge panel open/close, motor bar show/hide) resize the
+// canvas element without a window resize event — observe it directly so the
+// backing store never goes stale and gears don't stretch.
+if (window.ResizeObserver) new ResizeObserver(resize).observe(document.getElementById('canvasWrap'));
 resolve();
 requestAnimationFrame(tick);
 </script>
