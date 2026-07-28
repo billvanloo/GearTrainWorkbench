@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Gear Train Workbench — an interactive tool for building and analyzing gear trains: snap gears into mesh, stack compound pairs, drive them with a motor, and read out ratio, speed, torque and direction. Runs entirely in your browser.">
 <title>Gear Train Workbench</title>
 <style>
   :root{
@@ -24,7 +25,7 @@
   header{display:flex;align-items:center;gap:14px;padding:8px 14px;border-bottom:2px solid var(--ink);background:var(--paper);flex-wrap:wrap}
   .titleblock{display:flex;flex-direction:column;line-height:1.1}
   .titleblock .t1{font-size:15px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
-  .titleblock .t2{font-size:10px;letter-spacing:.08em;color:var(--ink-soft);text-transform:uppercase}
+  .titleblock .t2{font-size:12px;letter-spacing:.08em;color:var(--ink-soft);text-transform:uppercase}
   .modes{display:flex;border:1.5px solid var(--ink);border-radius:3px;overflow:hidden}
   .modes button{font:600 14px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;padding:7px 14px;border:none;background:transparent;color:var(--ink);cursor:pointer}
   .modes button.on{background:var(--ink);color:var(--paper)}
@@ -34,7 +35,7 @@
   .hbtns{display:flex;gap:6px;flex-wrap:wrap}
   .hbtns button{font:600 13px var(--font-ui);letter-spacing:.05em;padding:7px 10px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);border-radius:3px;cursor:pointer}
   .hbtns button:hover{background:var(--ink);color:var(--paper)}
-  #unlockTag{display:none;font:600 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--fail);border:1px solid var(--fail);border-radius:3px;padding:3px 7px}
+  #unlockTag{display:none;font:600 12px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--fail);border:1px solid var(--fail);border-radius:3px;padding:3px 7px}
 
   /* ---------- Main layout ---------- */
   main{flex:1;display:flex;min-height:0}
@@ -68,7 +69,7 @@
   #dro{display:flex;align-items:stretch;gap:0;background:var(--dro-bg);border-top:3px solid var(--ink);padding:8px 12px;flex-wrap:wrap}
   .dro-cell{display:flex;flex-direction:column;justify-content:center;padding:2px 18px 2px 6px;border-right:1px solid #343A41;min-width:120px}
   .dro-cell:last-child{border-right:none}
-  .dro-label{font:600 9px var(--font-ui);letter-spacing:.16em;text-transform:uppercase;color:#8B929B}
+  .dro-label{font:600 12px var(--font-ui);letter-spacing:.16em;text-transform:uppercase;color:#8B929B}
   .dro-val{font:700 22px var(--font-mono);color:var(--dro-amber);text-shadow:0 0 6px rgba(255,176,0,.35);white-space:nowrap}
   .dro-val.dim{color:var(--dro-dim);text-shadow:none}
   .dro-msg{flex:1;display:flex;align-items:center;font:12px var(--font-ui);color:#C7CCD2;padding-left:14px;min-width:180px}
@@ -81,8 +82,8 @@
   #challengePanel.open{display:flex}
   #chTiers{padding:10px 12px;border-bottom:1.5px solid var(--line);overflow-y:auto;max-height:38%}
   .tier{margin-bottom:8px}
-  .tier-h{font:700 11px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);display:flex;align-items:center;gap:6px;margin-bottom:4px}
-  .tier-h .lock{font-size:11px}
+  .tier-h{font:700 12px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);display:flex;align-items:center;gap:6px;margin-bottom:4px}
+  .tier-h .lock{font-size:12px}
   .chbtn{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;font:600 13.5px var(--font-ui);padding:6px 9px;margin-bottom:3px;border:1.5px solid var(--line);border-radius:3px;background:#fff;cursor:pointer}
   .chbtn:hover{border-color:var(--dykem)}
   .chbtn.active{border-color:var(--dykem);background:var(--dykem-soft)}
@@ -93,7 +94,7 @@
   #chDetail .scenario{font-size:14px;line-height:1.5;margin-bottom:10px}
   .given{font:13px var(--font-mono);background:#fff;border:1px solid var(--line);border-left:3px solid var(--brass);padding:7px 9px;margin-bottom:10px;line-height:1.6}
   .predbox{border:1.5px solid var(--ink);border-radius:4px;background:#fff;padding:10px;margin-bottom:10px}
-  .predbox h4{font:700 10px var(--font-ui);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .predbox h4{font:700 12px var(--font-ui);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
   .predrow{display:flex;align-items:center;gap:8px;margin-bottom:7px}
   .predrow label{font-size:14px;width:100px}
   .predrow input{font:15px var(--font-mono);width:90px;padding:5px 7px;border:1.5px solid var(--steel-edge);border-radius:3px}
@@ -105,11 +106,11 @@
   #chResult{margin-top:10px;display:none}
   #chResult table{width:100%;border-collapse:collapse;font:12px var(--font-mono);background:#fff}
   #chResult th,#chResult td{border:1px solid var(--line);padding:5px 7px;text-align:left}
-  #chResult th{font:700 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;background:#EDEBE2}
+  #chResult th{font:700 12px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;background:#EDEBE2}
   #chResult td.ok{color:var(--pass);font-weight:700}
   #chResult td.bad{color:var(--fail);font-weight:700}
   #chProblems{font-size:12px;color:var(--fail);margin-top:8px;line-height:1.5}
-  #chAttempts{font:11px var(--font-ui);color:var(--ink-soft);margin-top:8px;letter-spacing:.04em}
+  #chAttempts{font:12px var(--font-ui);color:var(--ink-soft);margin-top:8px;letter-spacing:.04em}
   .verdict{font:700 14px var(--font-mono);letter-spacing:.18em;text-align:center;padding:8px;border-radius:3px;margin-top:10px}
   .verdict.pass{border:2px solid var(--pass);color:var(--pass)}
   .verdict.fail{border:2px solid var(--fail);color:var(--fail)}
@@ -126,7 +127,7 @@
   #modal p,#modal li{font-size:15px;line-height:1.6;margin-bottom:8px}
   #modal ul{padding-left:20px;margin-bottom:10px}
   #modal .close{float:right;font:700 13px var(--font-ui);border:1.5px solid var(--ink);background:none;border-radius:3px;padding:5px 12px;cursor:pointer}
-  kbd{font:11px var(--font-mono);border:1px solid var(--steel-edge);border-bottom-width:2px;border-radius:3px;padding:1px 5px;background:#fff}
+  kbd{font:12px var(--font-mono);border:1px solid var(--steel-edge);border-bottom-width:2px;border-radius:3px;padding:1px 5px;background:#fff}
 
   /* ---------- Print report ---------- */
   #report{display:none}
@@ -151,6 +152,46 @@
     .dro-cell{min-width:96px}
     .dro-val{font-size:17px}
   }
+
+  /* ---------- Accessibility ---------- */
+  :focus-visible{outline:2px solid var(--dykem);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{
+      animation-duration:.001ms !important;
+      animation-iteration-count:1 !important;
+      transition-duration:.001ms !important;
+      scroll-behavior:auto !important;
+    }
+  }
+
+  /* ---------- Attribution footer ---------- */
+  /* Sits as the third flex child of body (header / main / footer); main{flex:1}
+     absorbs the remaining height, so the bar never overlaps the workbench. */
+  footer{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:6px 18px;
+    padding:7px 14px;
+    border-top:1.5px solid var(--line);
+    background:#F1EFE8;
+    font-size:12px;
+    color:var(--ink-soft);
+  }
+  footer .foot-by{color:var(--ink)}
+  footer a{color:var(--ink-soft);text-decoration:underline;text-underline-offset:2px;text-decoration-color:var(--line)}
+  footer a:hover{color:var(--dykem);text-decoration-color:var(--dykem)}
+  footer .foot-by a{color:var(--ink)}
+  footer .foot-spacer{flex:1}
+  /* The disclaimer plus five links can't share one line at any realistic width,
+     so give the disclaimer its own row rather than letting a link wrap at random. */
+  footer .foot-ai{color:var(--ink-soft);width:100%;order:10}
+  @media (max-width:860px){
+    footer{gap:4px 12px;padding:6px 10px}
+    footer .foot-spacer{display:none}
+  }
+  @media print{ footer{display:none !important} }
 </style>
 </head>
 <body>
@@ -172,7 +213,7 @@
     <button id="btnReport" title="Printable PDF report">Report / PDF</button>
     <button id="btnSave" title="Save design as a file">Save</button>
     <button id="btnLoad" title="Load a saved design">Load</button>
-    <button id="btnHelp">?</button>
+    <button id="btnHelp" aria-label="How to use the workbench" title="How to use the workbench">?</button>
   </div>
   <input type="file" id="fileInput" accept=".json,application/json" style="display:none">
 </header>
@@ -199,7 +240,7 @@
     <div id="canvasWrap">
       <canvas id="board"></canvas>
       <div id="hint">Tap a gear size then tap the sheet — or drag a size straight onto the sheet. Drag gears near each other to snap into mesh; drop one on a hub to stack it (compound).</div>
-      <div id="toast"></div>
+      <div id="toast" role="status" aria-live="polite"></div>
     </div>
     <div id="motorCtl">
       <span>Motor</span>
@@ -211,7 +252,7 @@
       <div class="dro-cell"><span class="dro-label">Output RPM</span><span class="dro-val" id="droRpm">—</span></div>
       <div class="dro-cell"><span class="dro-label">Output N·cm</span><span class="dro-val" id="droTorque">—</span></div>
       <div class="dro-cell"><span class="dro-label">Direction</span><span class="dro-val" id="droDir">—</span></div>
-      <div class="dro-msg" id="droMsg"></div>
+      <div class="dro-msg" id="droMsg" role="status" aria-live="polite"></div>
       <div class="dro-stamp" id="droStamp">PASS</div>
     </div>
   </div>
@@ -222,10 +263,32 @@
   </div>
 </main>
 
+<footer>
+  <!-- ================================================================
+       ATTRIBUTION / BRANDING BLOCK  ·  reusable across tools
+       GLOBAL (keep identical everywhere):
+         · "Designed by Bill Van Loo" -> billvanloo.com
+         · AI disclaimer
+         · Ko-fi support link
+         · MIT License link
+       PER-PROJECT (edit for each tool):
+         · the "[GearTrainWorkbench]" mailto subject tag
+         · the repo / source URL
+       ================================================================ -->
+  <span class="foot-by">Designed by <a href="https://billvanloo.com" target="_blank" rel="noopener"><strong>Bill Van Loo</strong></a></span>
+  <span class="foot-ai">Developed using Claude — please don't use this tool if you're uncomfortable using tools built with AI assistance.</span>
+  <span class="foot-spacer"></span>
+  <a href="mailto:billvanloo.tech+feedback@gmail.com?subject=%5BGearTrainWorkbench%5D%20Bug%20report">Report a bug</a>
+  <a href="mailto:billvanloo.tech+feedback@gmail.com?subject=%5BGearTrainWorkbench%5D%20Feature%20request">Request a feature</a>
+  <a href="https://ko-fi.com/billvanloo" target="_blank" rel="noopener">Support on Ko-fi</a>
+  <a href="https://github.com/billvanloo/GearTrainWorkbench/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+  <a href="https://github.com/billvanloo/GearTrainWorkbench" target="_blank" rel="noopener">View source</a>
+</footer>
+
 <div id="modalBack">
-  <div id="modal">
+  <div id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <button class="close" id="modalClose">Close</button>
-    <h2>How to use the workbench</h2>
+    <h2 id="modalTitle">How to use the workbench</h2>
     <p><strong>Build:</strong> tap a gear size in the palette then tap the sheet, or drag a size straight onto the sheet. Drag gears near each other and they snap into mesh. Drop a gear onto another gear's hub to stack it on the same shaft — that's a <em>compound</em> pair, shown with the largest gear behind and the smallest in front. A shaft holds at most two gears.</p>
     <p><strong>Power it:</strong> choose the Motor tool and tap a gear to attach the motor — or drag the Motor button straight onto a gear. Do the same with the Load tool where you want to measure output.</p>
     <p><strong>Read it:</strong> the amber readout shows overall ratio, output speed, output torque, and direction. CW = clockwise.</p>
