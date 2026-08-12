@@ -156,6 +156,8 @@
 
   /* ---------- Accessibility ---------- */
   :focus-visible{outline:2px solid var(--dykem);outline-offset:2px}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  #board:focus-visible{outline:3px solid var(--dykem);outline-offset:-3px}
   @media (prefers-reduced-motion:reduce){
     *,*::before,*::after{
       animation-duration:.001ms !important;
@@ -239,7 +241,9 @@
 
   <div id="stage">
     <div id="canvasWrap">
-      <canvas id="board"></canvas>
+      <canvas id="board" tabindex="0" role="application" aria-label="Gear sheet — interactive drawing area" aria-describedby="boardHelp trainSummary"></canvas>
+      <p id="boardHelp" class="sr-only">Interactive gear sheet. Once it has focus: press N or P to select the next or previous gear; Arrow keys move the selected gear, hold Shift to move farther; F flips the selected gear between the front and back plane; M meshes it with the nearest gear; S stacks it onto a nearby shaft to form a compound pair; O attaches the motor and L attaches the load to the selected gear's shaft; Delete removes it. To add a gear, press number keys 1 through 9 to drop a gear size onto the sheet, or press a gear-size button in the toolbar then press Enter here.</p>
+      <div id="trainSummary" class="sr-only" role="status" aria-live="polite"></div>
       <div id="hint">Tap a gear size then tap the sheet — or drag a size straight onto the sheet. Drag gears near each other to snap into mesh; drop one on a hub to stack it (compound).</div>
       <div id="toast" role="status" aria-live="polite"></div>
     </div>
@@ -548,9 +552,24 @@ function drawScene(c, w, h, solved, opts){
     c.fillStyle = back ? '#C4CCD4' : '#DCE1E6';
     if (S.selectedGear===g.id) c.fillStyle = back ? '#B9C8DE' : '#CBDCF2';
     c.fill();
-    c.lineWidth = 1.6;
-    c.strokeStyle = back ? '#6B747E' : '#7E8892';
+    // Back-plane gears get a diagonal hatch so the two planes are distinct
+    // without relying on the (near-imperceptible) gray difference alone.
+    if (back){
+      c.save();
+      c.clip();                          // clip hatch to the gear body just filled
+      c.strokeStyle = 'rgba(70,80,90,.38)';
+      c.lineWidth = 1;
+      for (let x=-r-r; x<=r+r; x+=7){
+        c.beginPath(); c.moveTo(x, -r-r); c.lineTo(x+2*r, r+r); c.stroke();
+      }
+      c.restore();
+    }
+    c.lineWidth = back ? 2 : 1.6;
+    c.strokeStyle = back ? '#5A636C' : '#7E8892';
+    if (back) c.setLineDash([5,3]);       // dashed rim = back plane
+    gearPath(c, r, g.teeth, s.angle||0);  // re-trace path (clip consumed the fill path)
     c.stroke();
+    c.setLineDash([]);
     // pitch circle (drafting convention: thin dash-dot)
     c.setLineDash([6,3,1.5,3]);
     c.lineWidth = 0.8;
@@ -573,6 +592,22 @@ function drawScene(c, w, h, solved, opts){
       c.font = '600 '+Math.max(10, Math.min(14, r*0.32))+'px ui-monospace, Consolas, monospace';
       c.textAlign='center'; c.textBaseline='middle';
       c.fillText(g.teeth+'T', 0, ly);
+    }
+    // Always-on plane tag: F (front) light pill / B (back) dark pill. The tonal
+    // inversion reads even in grayscale; the letter is unambiguous for everyone.
+    // A compound pair's larger (back) gear gets its tag nearer the rim so the
+    // smaller gear drawn on top does not cover it.
+    {
+      const mate = S.gears.find(o=>o.shaftId===g.shaftId && o.id!==g.id);
+      const ty = (mate && mate.teeth < g.teeth) ? r*0.8 : r*0.42;
+      c.beginPath(); c.arc(0, ty, 7.5, 0, Math.PI*2);
+      c.fillStyle = back ? '#3A424B' : '#F6F5F0';
+      c.fill();
+      c.lineWidth = 1.2; c.strokeStyle = '#3A424B'; c.stroke();
+      c.fillStyle = back ? '#F6F5F0' : '#23272C';
+      c.font = '700 10px ui-monospace, Consolas, monospace';
+      c.textAlign='center'; c.textBaseline='middle';
+      c.fillText(back ? 'B' : 'F', 0, ty);
     }
     c.restore();
   }
@@ -686,6 +721,33 @@ function resolve(){
   solved = solve(st);
   updateDRO();
   updateRunBtn();
+  updateTrainSummary();
+}
+// A running text description of the train for screen readers. Honors the
+// challenge gate: while the readout is hidden, the computed output is withheld
+// here too, so a screen-reader user is held to the same predict-first rule.
+function describeTrain(){
+  if (!S.gears.length) return 'Gear sheet is empty. No gears placed yet.';
+  const parts=[S.gears.length+' gear'+(S.gears.length>1?'s':'')+' on the sheet.'];
+  parts.push(S.motor?'Motor attached.':'No motor.');
+  parts.push(S.load?'Load attached.':'No load.');
+  if (S.selectedGear){
+    const g=S.gears.find(x=>x.id===S.selectedGear);
+    if (g) parts.push('Selected: '+g.teeth+'-tooth gear on the '+((g.layer||0)===1?'back':'front')+' plane.');
+  }
+  if (S.mode==='challenge' && !S.revealed){
+    parts.push('Readout hidden — enter your prediction, then Run.');
+  } else if (solved && solved.out){
+    parts.push('Output '+fmtNum(solved.out.rpm)+' RPM, '+fmtNum(solved.out.torque)+' newton-centimetres, '+
+      (solved.out.dir==='CW'?'clockwise':'counter-clockwise')+'. Overall ratio '+solved.ratioText+'.');
+  } else if (solved && solved.error){
+    parts.push(solved.error);
+  }
+  return parts.join(' ');
+}
+function updateTrainSummary(){
+  const el=document.getElementById('trainSummary');
+  if (el) el.textContent=describeTrain();
 }
 function droEl(id){ return document.getElementById(id); }
 function updateDRO(){
@@ -775,6 +837,20 @@ function sameLayerOverlap(gear, pos){
     if (d < target - MESH_EPS) return true;
   }
   return false;
+}
+// True when `gear` is sitting at a valid mesh distance from a gear on the OTHER
+// plane — they look like they should connect but won't, because meshing only
+// happens within a plane. Used to explain the #1 source of "why won't these
+// connect?" confusion (front/back planes).
+function crossPlaneNearMesh(gear, pos){
+  for (const h of S.gears){
+    if (h.id===gear.id || h.shaftId===gear.shaftId) continue;
+    if ((h.layer||0)===(gear.layer||0)) continue;   // only the opposite plane
+    const hs=shaftById(h.shaftId);
+    const d=dist(pos,hs), target=pitchRadius(gear.teeth)+pitchRadius(h.teeth);
+    if (Math.abs(d-target) <= MESH_EPS+2) return h;
+  }
+  return null;
 }
 function computeSnap(gear, pos){
   // Mesh snap: nearest gear (any layer — we adopt its layer) with |d - (r1+r2)| < SNAP
@@ -904,8 +980,111 @@ canvas.addEventListener('pointerup', ev=>{
       s.x=drag.startX; s.y=drag.startY;
       toast('A shaft can hold at most two gears.');
     } else if (sameLayerOverlap(g,{x:s.x,y:s.y})){ s.x=drag.startX; s.y=drag.startY; toast('That spot collides with another gear on the same plane.'); }
+    else {
+      const xp = crossPlaneNearMesh(g,{x:s.x,y:s.y});
+      if (xp) toast('These line up but sit on different planes ('+((g.layer||0)===1?'back':'front')+' vs '+(((xp.layer||0)===1)?'back':'front')+') — they can’t mesh. Put both on the same plane.');
+    }
   }
   resolve();
+});
+
+/* ---------- Keyboard operation (full pointer-free workflow) ---------- */
+function selectedGearObj(){ return S.gears.find(x=>x.id===S.selectedGear) || null; }
+function selectAdjacentGear(dir){
+  if (!S.gears.length){ toast('No gears on the sheet yet.'); return; }
+  const ids=S.gears.map(g=>g.id);
+  let i=ids.indexOf(S.selectedGear);
+  i = (i<0) ? (dir>0?0:ids.length-1) : (i+dir+ids.length)%ids.length;
+  S.selectedGear=ids[i];
+  const g=S.gears[i];
+  toast(g.teeth+'T gear selected — '+((g.layer||0)===1?'back':'front')+' plane.');
+  resolve();
+}
+function moveSelected(dx,dy){
+  const g=selectedGearObj(); if(!g){ selectAdjacentGear(1); return; }
+  const s=shaftById(g.shaftId);
+  s.x=Math.max(0,Math.min(CW,s.x+dx));
+  s.y=Math.max(0,Math.min(CH,s.y+dy));
+  resolve();
+}
+function meshSelected(){
+  const g=selectedGearObj(); if(!g){ toast('Select a gear first (N).'); return; }
+  const s=shaftById(g.shaftId);
+  const snap=computeSnap(g,{x:s.x,y:s.y});
+  if (!snap){
+    const xp=crossPlaneNearMesh(g,{x:s.x,y:s.y});
+    toast(xp ? 'Lined up but on a different plane — press F to flip it, then M.'
+             : 'No gear close enough to mesh. Nudge nearer with the arrows, then M.');
+    return;
+  }
+  pushUndo();
+  if (snap.type==='stack'){
+    const target=shaftById(snap.targetShaft), existing=gearsOn(target.id)[0], oldShaft=g.shaftId;
+    g.shaftId=target.id; assignStackLayers(existing,g); cleanupShaft(oldShaft);
+    toast('Stacked — compound stage.');
+  } else {
+    s.x=snap.x; s.y=snap.y; g.layer=snap.layer;
+    toast(sameLayerOverlap(g,{x:s.x,y:s.y}) ? 'That spot collides on the same plane.' : 'Meshed with the nearest gear.');
+  }
+  resolve();
+}
+function stackSelected(){
+  const g=selectedGearObj(); if(!g){ toast('Select a gear first (N).'); return; }
+  const s=shaftById(g.shaftId);
+  const hub=hitHub({x:s.x,y:s.y}, g.shaftId);
+  if (!hub || gearsOn(hub.id).length!==1){ toast('Move the gear onto another gear’s hub, then S.'); return; }
+  pushUndo();
+  const existing=gearsOn(hub.id)[0], oldShaft=g.shaftId;
+  g.shaftId=hub.id; assignStackLayers(existing,g); cleanupShaft(oldShaft);
+  toast('Stacked — compound stage.'); resolve();
+}
+function flipSelected(){
+  const g=selectedGearObj(); if(!g){ toast('Select a gear first (N).'); return; }
+  if (S.gears.some(o=>o.shaftId===g.shaftId && o.id!==g.id)){ toast('Compound gears stay on opposite planes — can’t flip one.'); return; }
+  pushUndo();
+  g.layer=(g.layer||0)===1?0:1;
+  toast('Moved to the '+((g.layer||0)===1?'back':'front')+' plane.');
+  resolve();
+}
+function attachSelected(kind){
+  const g=selectedGearObj(); if(!g){ toast('Select a gear first (N).'); return; }
+  pushUndo();
+  if (kind==='motor') S.motor={shaftId:g.shaftId}; else S.load={shaftId:g.shaftId};
+  toast((kind==='motor'?'Motor':'Load')+' attached to the selected gear’s shaft.');
+  resolve();
+}
+function placeTeethAtCenter(teeth){
+  const cx=CW/2, cy=CH/2;
+  for (let k=0;k<24;k++){
+    const g=placeGearAt(teeth, {x:cx+(k%12)*24, y:cy+Math.floor(k/12)*24}, null);
+    if (g){ toast(g.teeth+'T gear placed. Arrows move it; M meshes it.'); return; }
+  }
+  toast('No open space — clear some gears first.');
+}
+canvas.addEventListener('keydown', ev=>{
+  if (ev.key>='1' && ev.key<='9'){
+    const idx=Number(ev.key)-1;
+    if (idx<PALETTE_TEETH.length){ setPlacing(null); placeTeethAtCenter(PALETTE_TEETH[idx]); ev.preventDefault(); }
+    return;
+  }
+  const step = ev.shiftKey ? 10 : 2;
+  let handled=true;
+  switch(ev.key){
+    case 'ArrowLeft':  moveSelected(-step,0); break;
+    case 'ArrowRight': moveSelected(step,0); break;
+    case 'ArrowUp':    moveSelected(0,-step); break;
+    case 'ArrowDown':  moveSelected(0,step); break;
+    case 'n': case 'N': selectAdjacentGear(1); break;
+    case 'p': case 'P': selectAdjacentGear(-1); break;
+    case 'm': case 'M': meshSelected(); break;
+    case 's': case 'S': stackSelected(); break;
+    case 'f': case 'F': flipSelected(); break;
+    case 'o': case 'O': attachSelected('motor'); break;
+    case 'l': case 'L': attachSelected('load'); break;
+    case 'Enter': if (S.placingTeeth) placeTeethAtCenter(S.placingTeeth); else toast('Pick a gear size (or press 1–9) to place a gear.'); break;
+    default: handled=false;
+  }
+  if (handled) ev.preventDefault();
 });
 
 // Plane assignment for a compound pair: largest gear goes to the back plane
@@ -1069,6 +1248,9 @@ PALETTE_TEETH.forEach(t=>{
   };
   b.addEventListener('pointerup', endChipDrag);
   b.addEventListener('pointercancel', endChipDrag);
+  // Keyboard activation (Enter/Space) fires a click with detail 0 — pointer taps
+  // are handled above, so only act on the keyboard-synthesized click here.
+  b.addEventListener('click', ev=>{ if (ev.detail===0) setPlacing(S.placingTeeth===t?null:t); });
   chipWrap.appendChild(b);
 });
 function setPlacing(teeth){
@@ -1114,6 +1296,7 @@ function makeToolDraggable(btn, kind){
   };
   btn.addEventListener('pointerup', end);
   btn.addEventListener('pointercancel', end);
+  btn.addEventListener('click', ev=>{ if (ev.detail===0) setTool(kind); });
 }
 makeToolDraggable(document.getElementById('toolMotor'), 'motor');
 makeToolDraggable(document.getElementById('toolLoad'), 'load');
