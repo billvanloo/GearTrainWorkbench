@@ -114,6 +114,7 @@
   .verdict{font:700 14px var(--font-mono);letter-spacing:.18em;text-align:center;padding:8px;border-radius:3px;margin-top:10px}
   .verdict.pass{border:2px solid var(--pass);color:var(--pass)}
   .verdict.fail{border:2px solid var(--fail);color:var(--fail)}
+  .ghost-btn{width:100%;margin-top:10px;font:600 12px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;padding:8px;border:1.5px solid var(--ink);border-radius:4px;background:#fff;color:var(--ink);cursor:pointer}
 
   /* ---------- Sandbox motor controls ---------- */
   #motorCtl{display:flex;gap:10px;align-items:center;padding:6px 12px;border-top:1.5px solid var(--line);background:#F1EFE8;font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)}
@@ -463,8 +464,11 @@ const S = {
   mode:'sandbox',                    // 'sandbox' | 'challenge'
   activeChallenge:null,              // challenge object
   attempts:{}, completed:{},         // by challenge id
+  attemptLog:{},                     // by challenge id: [{n,pred,actual,pass,ts}]
   lastRun:null,                      // {pred, actual, eval, challengeId}
   revealed:true,                     // challenge mode hides readouts until run
+  resultShown:false,                 // a run's result is on screen; editing a
+                                     // prediction re-arms the gate (hides the answer)
   tool:null,                         // 'motor'|'load'|'delete'|null
   placingTeeth:null,
   selectedGear:null,
@@ -1171,7 +1175,7 @@ function openChallenge(id){
   const ch=CHALLENGES.find(c=>c.id===id); if(!ch) return;
   S.activeChallenge=ch;
   S.motorSpecs={rpm:ch.motor.rpm, torque:ch.motor.torque};
-  S.revealed=false; S.lastRun=null;
+  S.revealed=false; S.lastRun=null; S.resultShown=false;
   pred={rpm:'',torque:'',dir:null};
   if (!S.attempts[id]) S.attempts[id]=0;
   renderTierList();
@@ -1202,10 +1206,10 @@ function renderChallengeDetail(){
     '<div id="chAttempts">Attempts: '+S.attempts[ch.id]+'</div>';
   const rIn=document.getElementById('predRpm'), tIn=document.getElementById('predTorque');
   rIn.value=pred.rpm; tIn.value=pred.torque;
-  rIn.addEventListener('input',()=>{pred.rpm=rIn.value; updateRunBtn();});
-  tIn.addEventListener('input',()=>{pred.torque=tIn.value; updateRunBtn();});
+  rIn.addEventListener('input',()=>{rearmGate(); pred.rpm=rIn.value; updateRunBtn();});
+  tIn.addEventListener('input',()=>{rearmGate(); pred.torque=tIn.value; updateRunBtn();});
   const cwB=document.getElementById('predCW'), ccwB=document.getElementById('predCCW');
-  function setDir(x){ pred.dir=x; cwB.classList.toggle('on',x==='CW'); ccwB.classList.toggle('on',x==='CCW'); updateRunBtn(); }
+  function setDir(x){ if(pred.dir!==x) rearmGate(); pred.dir=x; cwB.classList.toggle('on',x==='CW'); ccwB.classList.toggle('on',x==='CCW'); updateRunBtn(); }
   cwB.addEventListener('click',()=>setDir('CW'));
   ccwB.addEventListener('click',()=>setDir('CCW'));
   if (pred.dir) setDir(pred.dir);
@@ -1216,6 +1220,20 @@ function updateRunBtn(){
   const b=document.getElementById('runBtn'); if(!b) return;
   const ready = pred.rpm!=='' && pred.torque!=='' && pred.dir;
   b.disabled=!ready;
+}
+// Re-arm the prediction gate: once a run's result is on screen, editing a
+// prediction (or pressing "Predict again") re-hides both the live readout and
+// the answer table so the next run requires a fresh, uninfluenced prediction.
+function rearmGate(){
+  if (!S.resultShown) return;
+  S.resultShown=false;
+  S.revealed=false;
+  S.lastRun=null;
+  const res=document.getElementById('chResult');
+  if (res){ res.style.display='none'; res.innerHTML=''; }
+  const stamp=document.getElementById('droStamp');
+  if (stamp) stamp.style.display='none';
+  resolve();
 }
 function runChallenge(){
   const ch=S.activeChallenge; if(!ch) return;
@@ -1229,6 +1247,11 @@ function runChallenge(){
   const p={rpm:Number(pred.rpm), torque:Number(pred.torque), dir:pred.dir};
   const ev=evaluateChallenge(ch, st, sv, p);
   S.lastRun={pred:p, actual:sv.out, eval:ev, challengeId:ch.id, challengeTitle:ch.id+' · '+ch.title};
+  S.resultShown=true;
+  (S.attemptLog[ch.id]=S.attemptLog[ch.id]||[]).push({
+    n:S.attempts[ch.id], pred:p, actual:sv.out?{rpm:sv.out.rpm,torque:sv.out.torque,dir:sv.out.dir}:null,
+    pass:ev.pass, ts:Date.now()
+  });
   if (ev.pass){ S.completed[ch.id]=true; renderTierList(); }
   // results table
   const res=document.getElementById('chResult');
@@ -1248,8 +1271,15 @@ function runChallenge(){
   res.innerHTML =
     '<table><tr><th></th><th>Predicted</th><th>Actual</th><th></th></tr>'+rows+'</table>'+
     (ev.problems.length? '<div id="chProblems">'+ev.problems.map(x=>'• '+x).join('<br>')+'</div>':'')+
-    '<div class="verdict '+(ev.pass?'pass':'fail')+'">'+(ev.pass?'PASS — CHALLENGE COMPLETE':(ev.targetOk&&!ev.predOk?'TRAIN WORKS — PREDICTION OFF':'NOT YET'))+'</div>';
+    '<div class="verdict '+(ev.pass?'pass':'fail')+'">'+(ev.pass?'PASS — CHALLENGE COMPLETE':(ev.targetOk&&!ev.predOk?'TRAIN WORKS — PREDICTION OFF':'NOT YET'))+'</div>'+
+    '<button id="predictAgainBtn" class="ghost-btn">Predict again</button>';
+  document.getElementById('predictAgainBtn').addEventListener('click',()=>{
+    pred={rpm:'',torque:'',dir:null};
+    rearmGate();
+    renderChallengeDetail();
+  });
   document.getElementById('chAttempts').textContent='Attempts: '+S.attempts[ch.id];
+  saveProgress();
   const stamp=document.getElementById('droStamp');
   stamp.style.display='flex';
   stamp.textContent=ev.pass?'PASS':'RETRY';
@@ -1330,6 +1360,13 @@ document.getElementById('btnReport').addEventListener('click',()=>{
       '<tr><td>Output torque</td><td>'+fmtNum(S.lastRun.pred.torque)+' N·cm</td><td>'+fmtNum(S.lastRun.actual.torque)+' N·cm</td></tr>'+
       '<tr><td>Direction</td><td>'+S.lastRun.pred.dir+'</td><td>'+S.lastRun.actual.dir+'</td></tr></table>'+
       '<p style="font-size:13px;font-weight:700">Result: '+(S.lastRun.eval.pass?'PASS':'Not passed')+'</p>';
+    const log=S.attemptLog[S.lastRun.challengeId];
+    if (log && log.length>1){
+      predBlock+='<h1 style="font-size:13px;margin-top:14px">Attempt history</h1>'+
+        '<table><tr><th>#</th><th>Predicted RPM</th><th>Predicted N·cm</th><th>Predicted dir</th><th>Result</th></tr>'+
+        log.map(a=>'<tr><td>'+a.n+'</td><td>'+fmtNum(a.pred.rpm)+'</td><td>'+fmtNum(a.pred.torque)+'</td><td>'+a.pred.dir+'</td><td>'+(a.pass?'PASS':'—')+'</td></tr>').join('')+
+        '</table>';
+    }
   }
   document.getElementById('report').innerHTML =
     '<div class="rb"><h1>Gear Train Workbench — Work Record</h1>'+
@@ -1346,8 +1383,34 @@ document.getElementById('btnReport').addEventListener('click',()=>{
   window.print();
 });
 
+/* ---------- Progress persistence (browser localStorage) ---------- */
+const PROGRESS_KEY='gtw.progress.v1';
+function saveProgress(){
+  try{
+    const nameEl=document.getElementById('studentName');
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify({
+      student:nameEl?(nameEl.value||'').trim():'',
+      completed:S.completed, attempts:S.attempts, attemptLog:S.attemptLog
+    }));
+  }catch(e){ /* private mode / quota — degrade to in-memory only */ }
+}
+function loadProgress(){
+  try{
+    const raw=localStorage.getItem(PROGRESS_KEY); if(!raw) return;
+    const d=JSON.parse(raw); if(!d||typeof d!=='object') return;
+    if (d.completed) S.completed=d.completed;
+    if (d.attempts) S.attempts=d.attempts;
+    if (d.attemptLog) S.attemptLog=d.attemptLog;
+    const nameEl=document.getElementById('studentName');
+    if (nameEl && d.student && !nameEl.value.trim()) nameEl.value=d.student;
+  }catch(e){ /* corrupt or unavailable — start fresh */ }
+}
+
 document.getElementById('btnSave').addEventListener('click',()=>{
-  const data={version:1, gears:S.gears, shafts:S.shafts.map(s=>({id:s.id,x:s.x,y:s.y})), motor:S.motor, load:S.load, motorSpecs:S.motorSpecs};
+  const data={version:2,
+    student:(document.getElementById('studentName').value||'').trim(),
+    gears:S.gears, shafts:S.shafts.map(s=>({id:s.id,x:s.x,y:s.y})), motor:S.motor, load:S.load, motorSpecs:S.motorSpecs,
+    progress:{completed:S.completed, attempts:S.attempts, attemptLog:S.attemptLog}};
   const a=document.createElement('a');
   a.download='gear-train-design.json';
   a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(data,null,2));
@@ -1371,7 +1434,19 @@ document.getElementById('fileInput').addEventListener('change',ev=>{
         document.getElementById('motorTorque').value=S.motorSpecs.torque; }
       let maxN=0; [...S.gears,...S.shafts].forEach(o=>{const m=/\d+$/.exec(o.id); if(m) maxN=Math.max(maxN,Number(m[0]));});
       S.idc=maxN;
-      resolve(); toast('Design loaded.');
+      // v2 files carry the student's name and progress. Merge non-destructively:
+      // never wipe progress already made in this session, and only fill the name
+      // box if it is empty. v1 files simply lack these fields.
+      const nameEl=document.getElementById('studentName');
+      if (d.student && !nameEl.value.trim()) nameEl.value=d.student;
+      let mergedProgress=false;
+      if (d.progress){
+        if (d.progress.completed){ Object.keys(d.progress.completed).forEach(k=>{ if(d.progress.completed[k]) S.completed[k]=true; }); mergedProgress=true; }
+        if (d.progress.attempts){ Object.keys(d.progress.attempts).forEach(k=>{ S.attempts[k]=Math.max(S.attempts[k]||0, d.progress.attempts[k]||0); }); mergedProgress=true; }
+        if (d.progress.attemptLog){ Object.keys(d.progress.attemptLog).forEach(k=>{ if(!S.attemptLog[k] || !S.attemptLog[k].length) S.attemptLog[k]=d.progress.attemptLog[k]; }); mergedProgress=true; }
+        if (mergedProgress){ renderTierList(); saveProgress(); }
+      }
+      resolve(); toast(mergedProgress?'Design and progress loaded.':'Design loaded.');
     }catch(e){ toast('Could not read that file.'); }
   };
   rd.readAsText(f);
@@ -1388,6 +1463,10 @@ if (/[?&]unlock=all/.test(location.search)){
   S.unlockAll=true;
   document.getElementById('unlockTag').style.display='inline-block';
 }
+// Restore saved progress (completed challenges, attempt counts, name) so a
+// refresh or closed tab does not wipe a student's work.
+loadProgress();
+document.getElementById('studentName').addEventListener('input', saveProgress);
 resize();
 // Layout changes (challenge panel open/close, motor bar show/hide) resize the
 // canvas element without a window resize event — observe it directly so the
