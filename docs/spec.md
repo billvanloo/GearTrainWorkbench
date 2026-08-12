@@ -214,6 +214,8 @@ The tool has shipped and evolved past this draft. The following are authoritativ
 
 - **Prediction gate re-arms after every attempt (extends §6).** After a run the live readout re-hides as soon as the student edits their prediction (or presses *Predict again*), so a second attempt cannot be read off the screen. Each attempt's prediction and result is logged and printed as an attempt-by-attempt history in the report. A *Reset this challenge* button clears the board and prediction without losing completed/attempt progress.
 
+- **"Show the working" panel (answers Open Question §11.2).** An optional collapsible panel below the readout breaks the ratio down mesh by mesh — driver/driven teeth, the running speed and torque at each shaft, direction, and a note where a compound gear rides a shaft — reconstructed from the solver's own results. It is visible only when the readout is, so it never reveals an answer before the student predicts.
+
 - **Palette limited per challenge (extends §3.2).** In a challenge only the gear sizes the brief lists are enabled; other sizes are greyed out and cannot be placed. Sandbox keeps all sizes.
 
 - **Progress persistence (supersedes §7.3, §8 "session-only", and the §10 "future" item).** Completed challenges, attempt counts, the attempt log, and the student name persist in the browser's `localStorage` and survive a refresh. The JSON save file (schema version 2) also carries the student name and progress and remains backward-compatible with version-1 files. Every download (image, report, save file) is named with the student, challenge, and date.

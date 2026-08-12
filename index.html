@@ -79,6 +79,19 @@
   .dro-stamp{display:none;align-items:center;font:700 15px var(--font-mono);letter-spacing:.2em;padding:0 14px;border:2px solid var(--pass);color:var(--pass);border-radius:3px;align-self:center}
   .dro-stamp.fail{border-color:var(--fail);color:#FF8A6B}
 
+  /* ---------- "Show the working" panel ---------- */
+  #workingBox{display:none;background:#F1EFE8;border-top:1.5px solid var(--line);font:13px var(--font-ui);color:var(--ink)}
+  #workingBox>summary{cursor:pointer;padding:8px 12px;font:600 12px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);user-select:none}
+  #workingBox[open]>summary{color:var(--ink);border-bottom:1px solid var(--line)}
+  #workingBody{padding:10px 12px}
+  .wk-lead,.wk-foot{font:12.5px/1.5 var(--font-ui);color:var(--ink-soft);margin:0 0 8px}
+  .wk-foot{margin:8px 0 0;color:var(--ink)}
+  .wk-scroll{overflow-x:auto}
+  .wk-table{border-collapse:collapse;font:12px var(--font-mono);background:#fff;min-width:100%}
+  .wk-table th,.wk-table td{border:1px solid var(--line);padding:4px 8px;text-align:left;white-space:nowrap}
+  .wk-table th{font:700 11px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;background:#EDEBE2}
+  .wk-compound{color:var(--brass-ink);font-weight:700}
+
   /* ---------- Challenge panel ---------- */
   #challengePanel{width:350px;border-left:1.5px solid var(--line);background:#F1EFE8;display:none;flex-direction:column;min-height:0}
   #challengePanel.open{display:flex}
@@ -262,6 +275,10 @@
       <div class="dro-msg" id="droMsg" role="status" aria-live="polite"></div>
       <div class="dro-stamp" id="droStamp">PASS</div>
     </div>
+    <details id="workingBox">
+      <summary>Show the working — stage-by-stage ratio math</summary>
+      <div id="workingBody"></div>
+    </details>
   </div>
 
   <div id="challengePanel">
@@ -299,7 +316,7 @@
     <p><strong>The two-plane rule — read this first.</strong> Every gear sits on a <em>front</em> or <em>back</em> plane, and gears only mesh with gears on the <em>same</em> plane. This is the single thing that stalls most people: two gears can look like they touch but won't turn each other if they're on different planes. Each gear is tagged <strong>F</strong> (front, light) or <strong>B</strong> (back, hatched) near its hub. A compound pair deliberately uses both planes — the large gear on the back, the small one on the front — so one stage can drive the next.</p>
     <p><strong>Build:</strong> click or tap a gear size in the palette then click or tap the sheet, or drag a size straight onto the sheet. Drag gears near each other and they snap into mesh. Drop a gear onto another gear's hub to stack it on the same shaft — that's a <em>compound</em> pair. A shaft holds at most two gears.</p>
     <p><strong>Power it:</strong> choose the Motor tool and click a gear to attach the motor — or drag the Motor button straight onto a gear. Do the same with the Load tool where you want to measure output.</p>
-    <p><strong>Read it:</strong> the amber readout shows overall ratio, output speed, output torque, and direction. CW = clockwise.</p>
+    <p><strong>Read it:</strong> the amber readout shows overall ratio, output speed, output torque, and direction. CW = clockwise. Open <em>Show the working</em> below the readout to see the ratio built up mesh by mesh — useful for checking where a prediction went wrong.</p>
     <ul>
       <li>Meshed gears turn opposite directions; gears on one shaft turn together.</li>
       <li>Ideal train: speed ÷ R, torque × R. Power in = power out.</li>
@@ -733,6 +750,66 @@ function resolve(){
   updateDRO();
   updateRunBtn();
   updateTrainSummary();
+  updateWorking();
+}
+// Reconstruct the shaft path from the motor to the load as an ordered list of
+// mesh stages, using only the solver's own results. Returns [{driver, driven}]
+// (driver upstream, driven downstream), or null when there is no clean path.
+function motorToLoadPath(){
+  if (!S.motor || !S.load || !solved || !solved.reachable || !solved.reachable.has(S.load.shaftId)) return null;
+  const gearById={}; S.gears.forEach(g=>gearById[g.id]=g);
+  const adj={};
+  solved.meshes.forEach(([a,b])=>{
+    const ga=gearById[a], gb=gearById[b]; if(!ga||!gb) return;
+    (adj[ga.shaftId]=adj[ga.shaftId]||[]).push({to:gb.shaftId, driver:ga, driven:gb});
+    (adj[gb.shaftId]=adj[gb.shaftId]||[]).push({to:ga.shaftId, driver:gb, driven:ga});
+  });
+  const start=S.motor.shaftId, goal=S.load.shaftId;
+  if (start===goal) return [];
+  const prev={}; const seen=new Set([start]); const q=[start];
+  while(q.length){
+    const s=q.shift();
+    if (s===goal) break;
+    for (const e of (adj[s]||[])) if(!seen.has(e.to)){ seen.add(e.to); prev[e.to]={from:s, edge:e}; q.push(e.to); }
+  }
+  if (!(goal in prev)) return null;
+  const stages=[]; let cur=goal;
+  while(cur!==start){ const p=prev[cur]; if(!p) return null; stages.unshift(p.edge); cur=p.from; }
+  return stages;
+}
+// Optional collapsible panel showing the ratio math stage by stage. Only visible
+// when the readout is (per the challenge gate), so it never leaks an answer
+// before the student predicts.
+function updateWorking(){
+  const box=document.getElementById('workingBox'); if(!box) return;
+  const gateHidden=(S.mode==='challenge' && !S.revealed);
+  const stages=(!gateHidden && solved && solved.out) ? motorToLoadPath() : null;
+  if (!stages || !stages.length){ box.style.display='none'; return; }
+  box.style.display='block';
+  const mRpm=S.motorSpecs.rpm, mTorque=S.motorSpecs.torque;
+  let rows='';
+  stages.forEach((st,i)=>{
+    const drv=st.driver.teeth, dvn=st.driven.teeth;
+    const toRpm=solved.shaftRpm[st.driven.shaftId];
+    const toTq=solved.shaftTorque[st.driven.shaftId];
+    const dir=toRpm>0?'CW':(toRpm<0?'CCW':'—');
+    const next=stages[i+1];
+    const compound = next && next.driver.shaftId===st.driven.shaftId && next.driver.id!==st.driven.id;
+    rows += '<tr><td>'+(i+1)+'</td>'+
+      '<td>'+drv+'T → '+dvn+'T</td>'+
+      '<td>× '+drv+'/'+dvn+'</td>'+
+      '<td>'+fmtNum(Math.abs(toRpm))+' RPM'+(compound?' <span class="wk-compound">(compound: '+next.driver.teeth+'T rides this shaft)</span>':'')+'</td>'+
+      '<td>'+fmtNum(toTq)+' N·cm</td>'+
+      '<td>'+dir+'</td></tr>';
+  });
+  const meshCount=stages.length;
+  const dirSentence='The train has '+meshCount+' mesh'+(meshCount>1?'es':'')+', so the output turns '+
+    (meshCount%2===0?'the <strong>same</strong> direction as':'the <strong>opposite</strong> direction to')+' the motor'+
+    (meshCount>1?' (each mesh reverses direction; idlers reverse it but do not change the ratio)':'')+'.';
+  document.getElementById('workingBody').innerHTML =
+    '<p class="wk-lead">Motor: '+fmtNum(mRpm)+' RPM · '+fmtNum(mTorque)+' N·cm · CW. Each mesh multiplies speed by (driver ÷ driven teeth) and torque by the inverse, and reverses direction. Gears sharing a shaft (a compound stage) spin together.</p>'+
+    '<div class="wk-scroll"><table class="wk-table"><tr><th>#</th><th>Mesh</th><th>Speed ×</th><th>Running speed</th><th>Torque</th><th>Dir</th></tr>'+rows+'</table></div>'+
+    '<p class="wk-foot">Overall ratio = '+solved.ratioText+'. Output speed = motor speed ÷ ratio = <strong>'+fmtNum(solved.out.rpm)+' RPM</strong>; output torque = motor torque × ratio = <strong>'+fmtNum(solved.out.torque)+' N·cm</strong>. '+dirSentence+'</p>';
 }
 // A running text description of the train for screen readers. Honors the
 // challenge gate: while the readout is hidden, the computed output is withheld

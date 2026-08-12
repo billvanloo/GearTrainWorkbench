@@ -15,6 +15,7 @@ An interactive gear train simulator — a tool for engineering education coverin
 - Prediction gate in challenge mode: students commit to predicted output RPM, torque, and direction before the solver runs — and the readout re-hides after every attempt, so each run needs a fresh prediction
 - Four gated challenge tiers, from simple meshes through a design brief (a winch requiring 14–16 RPM and ≥ 60 N·cm in ≤ 6 gears); in a challenge the palette is limited to the sizes the brief lists
 - Progress (completed challenges, attempts, name) persists in the browser and survives a refresh
+- Optional "Show the working" panel that breaks the ratio down mesh by mesh (gated behind the prediction, so it never leaks an answer early)
 - Fully keyboard-operable, with a screen-reader description of the train and support for the OS "reduce motion" setting
 - Sandbox mode, JSON save/load, PNG export with title block, print-to-PDF run record — all named with the student, challenge, and date
 
