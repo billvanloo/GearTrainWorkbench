@@ -246,7 +246,7 @@
       <canvas id="board" tabindex="0" role="application" aria-label="Gear sheet — interactive drawing area" aria-describedby="boardHelp trainSummary"></canvas>
       <p id="boardHelp" class="sr-only">Interactive gear sheet. Once it has focus: press N or P to select the next or previous gear; Arrow keys move the selected gear, hold Shift to move farther; F flips the selected gear between the front and back plane; M meshes it with the nearest gear; S stacks it onto a nearby shaft to form a compound pair; O attaches the motor and L attaches the load to the selected gear's shaft; Delete removes it. To add a gear, press number keys 1 through 9 to drop a gear size onto the sheet, or press a gear-size button in the toolbar then press Enter here.</p>
       <div id="trainSummary" class="sr-only" role="status" aria-live="polite"></div>
-      <div id="hint">Tap a gear size then tap the sheet — or drag a size straight onto the sheet. Drag gears near each other to snap into mesh; drop one on a hub to stack it (compound).</div>
+      <div id="hint">Click or tap a gear size then click the sheet — or drag a size straight onto the sheet. Drag gears near each other to snap into mesh; drop one on a hub to stack it (compound). Gears mesh only with same-plane gears (F/B tag on each hub). No mouse? Press the ? for keyboard controls.</div>
       <div id="toast" role="status" aria-live="polite"></div>
     </div>
     <div id="motorCtl">
@@ -296,17 +296,26 @@
   <div id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
     <button class="close" id="modalClose">Close</button>
     <h2 id="modalTitle">How to use the workbench</h2>
-    <p><strong>Build:</strong> tap a gear size in the palette then tap the sheet, or drag a size straight onto the sheet. Drag gears near each other and they snap into mesh. Drop a gear onto another gear's hub to stack it on the same shaft — that's a <em>compound</em> pair, shown with the largest gear behind and the smallest in front. A shaft holds at most two gears.</p>
-    <p><strong>Power it:</strong> choose the Motor tool and tap a gear to attach the motor — or drag the Motor button straight onto a gear. Do the same with the Load tool where you want to measure output.</p>
+    <p><strong>The two-plane rule — read this first.</strong> Every gear sits on a <em>front</em> or <em>back</em> plane, and gears only mesh with gears on the <em>same</em> plane. This is the single thing that stalls most people: two gears can look like they touch but won't turn each other if they're on different planes. Each gear is tagged <strong>F</strong> (front, light) or <strong>B</strong> (back, hatched) near its hub. A compound pair deliberately uses both planes — the large gear on the back, the small one on the front — so one stage can drive the next.</p>
+    <p><strong>Build:</strong> click or tap a gear size in the palette then click or tap the sheet, or drag a size straight onto the sheet. Drag gears near each other and they snap into mesh. Drop a gear onto another gear's hub to stack it on the same shaft — that's a <em>compound</em> pair. A shaft holds at most two gears.</p>
+    <p><strong>Power it:</strong> choose the Motor tool and click a gear to attach the motor — or drag the Motor button straight onto a gear. Do the same with the Load tool where you want to measure output.</p>
     <p><strong>Read it:</strong> the amber readout shows overall ratio, output speed, output torque, and direction. CW = clockwise.</p>
     <ul>
       <li>Meshed gears turn opposite directions; gears on one shaft turn together.</li>
       <li>Ideal train: speed ÷ R, torque × R. Power in = power out.</li>
-      <li>Gears only mesh within the same plane. Front-plane gears are light; back-plane gears are darker.</li>
     </ul>
-    <p><strong>Challenge mode:</strong> build the train, then enter your <em>predicted</em> output before you run. The workbench compares your prediction to the actual result — calculate first, then check.</p>
-    <p><strong>Remove &amp; undo:</strong> with the Remove tool, tap a gear to delete it, or tap an <em>M</em>/<em>L</em> badge to detach the motor or load. Undo (or <kbd>Ctrl/⌘ Z</kbd>) reverses the last change.</p>
-    <p><strong>Keys:</strong> <kbd>Delete</kbd> removes the selected gear. <kbd>Ctrl/⌘ Z</kbd> undoes. <kbd>Esc</kbd> cancels a tool.</p>
+    <p><strong>Challenge mode:</strong> build the train, then enter your <em>predicted</em> output before you run. The workbench compares your prediction to the actual result — calculate first, then check. Each run re-hides the readout, so every attempt needs a fresh prediction; <em>Predict again</em> or <em>Reset this challenge</em> starts over. In a challenge the palette is limited to the gear sizes the brief lists.</p>
+    <p><strong>Your progress is saved</strong> in this browser — completed challenges, attempts, and your name survive a refresh. Downloads (image, report, save file) are named with your name, the challenge, and the date, so type your name in the Name box first.</p>
+    <p><strong>Keyboard (no mouse needed):</strong> focus the sheet (Tab to it), then:</p>
+    <ul>
+      <li><kbd>1</kbd>–<kbd>9</kbd> drop a gear size onto the sheet</li>
+      <li><kbd>N</kbd>/<kbd>P</kbd> select the next / previous gear; arrow keys move it (hold <kbd>Shift</kbd> to move farther)</li>
+      <li><kbd>M</kbd> mesh with the nearest gear · <kbd>S</kbd> stack into a compound pair · <kbd>F</kbd> flip the front/back plane</li>
+      <li><kbd>O</kbd> attach the motor · <kbd>L</kbd> attach the load · <kbd>Delete</kbd> remove the selected gear</li>
+      <li><kbd>Ctrl/⌘ Z</kbd> undo · <kbd>Esc</kbd> cancels a tool</li>
+    </ul>
+    <p>A screen reader announces the sheet and a running description of the train as you build. Turning on your system's <em>reduce motion</em> setting stops the gears from spinning while keeping the numbers live.</p>
+    <p><strong>Devices:</strong> use a laptop, desktop, or full-size tablet. A phone screen is too small for the drawing area — a phone layout is planned but not here yet.</p>
   </div>
 </div>
 

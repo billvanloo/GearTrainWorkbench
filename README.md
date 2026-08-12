@@ -11,15 +11,20 @@ An interactive gear train simulator — a tool for engineering education coverin
 ## Features
 
 - Spatial gear placement with snap-assist meshing; shafts are first-class objects (two gears on one shaft = compound stage)
-- Two axial layers so compound trains are physically valid — gears only mesh on the same layer
-- Prediction gate in challenge mode: students commit to predicted output RPM, torque, and direction before the solver runs
-- Four gated challenge tiers, from simple meshes through a design brief (a winch requiring 14–16 RPM and ≥ 60 N·cm in ≤ 6 gears)
-- Sandbox mode, JSON save/load, PNG export with title block, print-to-PDF run record
+- Two axial planes so compound trains are physically valid — gears only mesh on the same plane, marked with an F/B tag on every hub and a hatch on the back plane
+- Prediction gate in challenge mode: students commit to predicted output RPM, torque, and direction before the solver runs — and the readout re-hides after every attempt, so each run needs a fresh prediction
+- Four gated challenge tiers, from simple meshes through a design brief (a winch requiring 14–16 RPM and ≥ 60 N·cm in ≤ 6 gears); in a challenge the palette is limited to the sizes the brief lists
+- Progress (completed challenges, attempts, name) persists in the browser and survives a refresh
+- Fully keyboard-operable, with a screen-reader description of the train and support for the OS "reduce motion" setting
+- Sandbox mode, JSON save/load, PNG export with title block, print-to-PDF run record — all named with the student, challenge, and date
 
 ## Teacher notes
 
 - Unlock all challenge tiers with **Alt+Shift+U** or by loading the page with `?unlock=all`
 - Challenge definitions live in a plain JSON block inside `index.html` — edit targets, tolerances, and part budgets freely
+- Progress is stored in the browser's `localStorage`; the JSON save file also carries the student's name and progress, so a student can hand in one file or move between machines
+- The printable report includes an attempt-by-attempt history, so you can see a student's reasoning improve rather than only a final pass
+- Have students type their name in the Name box before exporting — every download is then named with the student, challenge, and date
 - Known cosmetic limitation: meshed teeth are not phase-aligned in the drawing; ratios, speeds, and torques are exact
 
 ## Development

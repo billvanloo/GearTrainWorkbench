@@ -4,6 +4,8 @@
 **Platform:** Single self-contained HTML file, vanilla JS, offline-capable, Chromebook-friendly
 **Author:** Bill (with Claude)
 
+> **Note:** This is the original functional specification, kept as a design record. Several points have since been superseded by the shipped tool — see **§12 Implementation updates** at the end. Where this draft and §12 disagree, §12 is authoritative.
+
 ---
 
 ## 1. Purpose & Pedagogy
@@ -201,3 +203,21 @@ Motor torque–speed curves, efficiency/friction losses, belt/chain drives and s
 1. Gear palette: fixed set of tooth counts (8, 10, 12, 16, 20, 24, 30, 40, 60) or a "custom teeth" input? (Recommend fixed set for v1 — mirrors a physical kit and keeps challenges solvable by design.)
 2. Should the FBD-style "show the math" panel (ratio chain worked out symbolically) be in v1 or Phase 3?
 3. Do challenge tiers need per-section variation (different numbers per class period) to limit answer-sharing?
+
+---
+
+## 12. Implementation updates (since the v0.1 draft)
+
+The tool has shipped and evolved past this draft. The following are authoritative where they differ from the sections above.
+
+- **Two axial planes with explicit cues (supersedes §4).** Gears sit on a front or back plane and only mesh with same-plane gears. The plane is shown by an F/B tag on every hub and a hatch + dashed rim on back-plane gears, not by a gray-tone difference alone. Dropping a gear at a mesh distance from a gear on the *other* plane surfaces a specific "different planes" message.
+
+- **Prediction gate re-arms after every attempt (extends §6).** After a run the live readout re-hides as soon as the student edits their prediction (or presses *Predict again*), so a second attempt cannot be read off the screen. Each attempt's prediction and result is logged and printed as an attempt-by-attempt history in the report. A *Reset this challenge* button clears the board and prediction without losing completed/attempt progress.
+
+- **Palette limited per challenge (extends §3.2).** In a challenge only the gear sizes the brief lists are enabled; other sizes are greyed out and cannot be placed. Sandbox keeps all sizes.
+
+- **Progress persistence (supersedes §7.3, §8 "session-only", and the §10 "future" item).** Completed challenges, attempt counts, the attempt log, and the student name persist in the browser's `localStorage` and survive a refresh. The JSON save file (schema version 2) also carries the student name and progress and remains backward-compatible with version-1 files. Every download (image, report, save file) is named with the student, challenge, and date.
+
+- **Accessibility (extends §5).** The drawing area is fully keyboard-operable — 1–9 place a gear, N/P select, arrows move, M mesh, S stack, F flip plane, O/L attach motor/load, Delete remove — and exposes an accessible name plus an `aria-live` running text description of the train (which honors the prediction gate). The gear animation honors the OS `prefers-reduced-motion` setting, read live. The Motor control's gold meets the 4.5:1 contrast standard.
+
+- **Device support (clarifies §5).** Targeted at laptops, desktops, and full-size tablets. A dedicated phone layout is not yet implemented; on-screen wording no longer implies phone support.
