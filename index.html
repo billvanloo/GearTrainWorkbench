@@ -5,8 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Gear Train Workbench — an interactive tool for building and analyzing gear trains: snap gears into mesh, stack compound pairs, drive them with a motor, and read out ratio, speed, torque and direction. Runs entirely in your browser.">
 <title>Gear Train Workbench</title>
+<script>
+  // Set theme before first paint to avoid a flash. A stored choice wins; otherwise follow the OS.
+  (function () {
+    try {
+      var t = localStorage.getItem('gtw-theme');
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  })();
+</script>
 <style>
-  :root{
+  /* ---------------------------------------------------------------------
+     PALETTE
+     Every colour the tool draws — in CSS *and* on the canvas — comes from
+     here. The canvas reads these via the PAL cache in JS (see refreshPalette),
+     so adding a theme means adding a block below and nothing else.
+     --------------------------------------------------------------------- */
+  :root, :root[data-theme="light"]{
     --paper:#F6F5F0; --grid-minor:#E7E5DC; --grid-major:#D8D5C8;
     --ink:#23272C; --ink-soft:#5A6068; --line:#C9C6BA;
     --steel:#DCE1E6; --steel-edge:#7E8892; --steel-back:#C4CCD4;
@@ -14,8 +34,50 @@
     --brass:#B08A2E; --brass-soft:#F5EBD2; --brass-ink:#7A5A16;
     --pass:#2E7D46; --fail:#B3402F;
     --dro-bg:#1D2126; --dro-amber:#FFB000; --dro-dim:#7A6428;
+    /* canvas-only roles */
+    --steel-edge-back:#6B747E;
+    --sel-front:#CBDCF2; --sel-back:#B9C8DE;
+    --hub-ring:#9AA3AC;
+    --hatch-front:rgba(126,136,146,.55); --hatch-back:rgba(90,100,110,.5);
+    --plane-hatch:rgba(70,80,90,.38);                 /* back-plane body hatch */
+    --tag-lite:#F6F5F0; --tag-dark:#23272C;           /* F/B plane pills (light vs dark) */
+    --badge-text:#ffffff; --gear-label:#23272C; --chip-label:#23272C;
+    --shaft-fill:#F6F5F0;
+    --outline:#F6F5F0;          /* halo drawn around badges/labels */
+    /* chrome */
+    --panel:#F1EFE8; --field:#ffffff; --rule:#B9B6AA; --th-bg:#EDEBE2;
+    --hint-bg:rgba(246,245,240,.9); --scrim:rgba(35,39,44,.5);
+    --dro-line:#343A41; --dro-label:#8B929B; --dro-msg:#C7CCD2;
+    --dro-glow:rgba(255,176,0,.35); --dro-bad:#FF8A6B;
     --font-ui:"Avenir Next","Segoe UI","Trebuchet MS",system-ui,sans-serif;
     --font-mono:ui-monospace,"Cascadia Mono","SF Mono",Consolas,Menlo,monospace;
+  }
+
+  /* Blueprint — white linework on a deep cyanotype field, the dark counterpart to
+     the paper theme. Two constraints shape it: the dykem accent moves to cyan
+     because the usual blue vanishes against a blue ground, and it must stay
+     distinct from brass so the motor and load badges don't collapse into one. */
+  :root[data-theme="dark"]{
+    --paper:#0C2B4E; --grid-minor:#123659; --grid-major:#1A4771;
+    --ink:#EAF2FB; --ink-soft:#A8C2DC; --line:#1E5183;
+    --steel:#8FB2D2; --steel-edge:#E4EFFA; --steel-back:#5E86AB;
+    --dykem:#5FD0E8; --dykem-soft:#123659;
+    --brass:#FFC94D; --brass-soft:#2A2410; --brass-ink:#FFC94D;
+    --pass:#57D493; --fail:#FF8A73;
+    --dro-bg:#071B31; --dro-amber:#FFC94D; --dro-dim:#7A6428;
+    --steel-edge-back:#A9C4DC;
+    --sel-front:#2E6FA8; --sel-back:#245683;
+    --hub-ring:#D3E3F3;
+    --hatch-front:rgba(225,238,250,.42); --hatch-back:rgba(190,212,232,.32);
+    --plane-hatch:rgba(230,240,250,.34);
+    --tag-lite:#EAF2FB; --tag-dark:#08243F;
+    --badge-text:#08243F; --gear-label:#08243F; --chip-label:#E4EFFA;
+    --shaft-fill:#123659;
+    --outline:#0C2B4E;
+    --panel:#0F3157; --field:#123659; --rule:#1E5183; --th-bg:#123659;
+    --hint-bg:rgba(12,43,78,.9); --scrim:rgba(3,15,28,.65);
+    --dro-line:#1A4771; --dro-label:#A8C2DC; --dro-msg:#D3E3F3;
+    --dro-glow:rgba(255,201,77,.35); --dro-bad:#FF8A73;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
@@ -39,24 +101,24 @@
 
   /* ---------- Main layout ---------- */
   main{flex:1;display:flex;min-height:0}
-  #palette{width:180px;border-right:1.5px solid var(--line);padding:10px 8px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;background:#F1EFE8}
+  #palette{width:180px;border-right:1.5px solid var(--line);padding:10px 8px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;background:var(--panel)}
   .pal-label{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin:6px 0 2px}
   #gearChips{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-  .gchip{display:flex;align-items:center;justify-content:center;gap:6px;border:1.5px solid var(--steel-edge);background:#fff;border-radius:4px;padding:7px 4px;cursor:pointer;font:600 16px var(--font-mono);touch-action:none}
+  .gchip{display:flex;align-items:center;justify-content:center;gap:6px;border:1.5px solid var(--steel-edge);background:var(--field);border-radius:4px;padding:7px 4px;cursor:pointer;font:600 16px var(--font-mono);color:var(--chip-label);touch-action:none}
   .gchip svg{flex:none}
   .gchip:hover{border-color:var(--dykem);background:var(--dykem-soft)}
-  .gchip.armed{border-color:var(--dykem);background:var(--dykem);color:#fff}
+  .gchip.armed{border-color:var(--dykem);background:var(--dykem);color:var(--badge-text)}
   .gchip.disallowed{opacity:.32;cursor:not-allowed;filter:grayscale(1)}
-  .gchip.disallowed:hover{border-color:var(--steel-edge);background:#fff}
-  .toolbtn{border:1.5px solid var(--ink);background:#fff;border-radius:4px;padding:8px 10px;cursor:pointer;font:600 14px var(--font-ui);letter-spacing:.04em;text-transform:uppercase;text-align:left;touch-action:none}
-  .toolbtn:hover{background:var(--ink);color:#fff}
-  .toolbtn.armed{background:var(--ink);color:#fff}
+  .gchip.disallowed:hover{border-color:var(--steel-edge);background:var(--field)}
+  .toolbtn{border:1.5px solid var(--ink);background:var(--field);border-radius:4px;padding:8px 10px;cursor:pointer;font:600 14px var(--font-ui);letter-spacing:.04em;text-transform:uppercase;text-align:left;touch-action:none}
+  .toolbtn:hover{background:var(--ink);color:var(--badge-text)}
+  .toolbtn.armed{background:var(--ink);color:var(--badge-text)}
   .toolbtn.motor{border-color:var(--brass-ink);color:var(--brass-ink)}
-  .toolbtn.motor.armed,.toolbtn.motor:hover{background:var(--brass-ink);color:#fff}
+  .toolbtn.motor.armed,.toolbtn.motor:hover{background:var(--brass-ink);color:var(--badge-text)}
   .toolbtn.load{border-color:var(--dykem);color:var(--dykem)}
-  .toolbtn.load.armed,.toolbtn.load:hover{background:var(--dykem);color:#fff}
+  .toolbtn.load.armed,.toolbtn.load:hover{background:var(--dykem);color:var(--badge-text)}
   .toolbtn.danger{border-color:var(--fail);color:var(--fail)}
-  .toolbtn.danger:hover{background:var(--fail);color:#fff}
+  .toolbtn.danger:hover{background:var(--fail);color:var(--badge-text)}
   .palctl{font-size:12px;color:var(--ink-soft);letter-spacing:.05em;text-transform:uppercase;margin-top:8px}
   .palctl input[type=range]{width:100%}
   .palctl label{display:flex;align-items:center;gap:5px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--ink);margin-top:4px}
@@ -64,42 +126,42 @@
   #stage{flex:1;display:flex;flex-direction:column;min-width:0}
   #canvasWrap{flex:1;position:relative;min-height:0}
   canvas#board{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
-  #hint{position:absolute;left:12px;top:10px;font:16px/1.45 var(--font-ui);letter-spacing:.02em;color:var(--ink-soft);background:rgba(246,245,240,.9);padding:6px 10px;border-radius:3px;pointer-events:none;max-width:min(560px,80%)}
+  #hint{position:absolute;left:12px;top:10px;font:16px/1.45 var(--font-ui);letter-spacing:.02em;color:var(--ink-soft);background:var(--hint-bg);padding:6px 10px;border-radius:3px;pointer-events:none;max-width:min(560px,80%)}
   #toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:var(--ink);color:var(--paper);font:14px var(--font-ui);padding:7px 14px;border-radius:4px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:80%}
 
   /* ---------- DRO readout bar (signature element) ---------- */
   #dro{display:flex;align-items:stretch;gap:0;background:var(--dro-bg);border-top:3px solid var(--ink);padding:8px 12px;flex-wrap:wrap}
-  .dro-cell{display:flex;flex-direction:column;justify-content:center;padding:2px 18px 2px 6px;border-right:1px solid #343A41;min-width:120px}
+  .dro-cell{display:flex;flex-direction:column;justify-content:center;padding:2px 18px 2px 6px;border-right:1px solid var(--dro-line);min-width:120px}
   .dro-cell:last-child{border-right:none}
-  .dro-label{font:600 12px var(--font-ui);letter-spacing:.16em;text-transform:uppercase;color:#8B929B}
-  .dro-val{font:700 22px var(--font-mono);color:var(--dro-amber);text-shadow:0 0 6px rgba(255,176,0,.35);white-space:nowrap}
+  .dro-label{font:600 12px var(--font-ui);letter-spacing:.16em;text-transform:uppercase;color:var(--dro-label)}
+  .dro-val{font:700 22px var(--font-mono);color:var(--dro-amber);text-shadow:0 0 6px var(--dro-glow);white-space:nowrap}
   .dro-val.dim{color:var(--dro-dim);text-shadow:none}
-  .dro-msg{flex:1;display:flex;align-items:center;font:12px var(--font-ui);color:#C7CCD2;padding-left:14px;min-width:180px}
-  .dro-msg.err{color:#FF8A6B}
+  .dro-msg{flex:1;display:flex;align-items:center;font:12px var(--font-ui);color:var(--dro-msg);padding-left:14px;min-width:180px}
+  .dro-msg.err{color:var(--dro-bad)}
   .dro-stamp{display:none;align-items:center;font:700 15px var(--font-mono);letter-spacing:.2em;padding:0 14px;border:2px solid var(--pass);color:var(--pass);border-radius:3px;align-self:center}
-  .dro-stamp.fail{border-color:var(--fail);color:#FF8A6B}
+  .dro-stamp.fail{border-color:var(--fail);color:var(--dro-bad)}
 
   /* ---------- "Show the working" panel ---------- */
-  #workingBox{display:none;background:#F1EFE8;border-top:1.5px solid var(--line);font:13px var(--font-ui);color:var(--ink)}
+  #workingBox{display:none;background:var(--panel);border-top:1.5px solid var(--line);font:13px var(--font-ui);color:var(--ink)}
   #workingBox>summary{cursor:pointer;padding:8px 12px;font:600 12px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);user-select:none}
   #workingBox[open]>summary{color:var(--ink);border-bottom:1px solid var(--line)}
   #workingBody{padding:10px 12px}
   .wk-lead,.wk-foot{font:12.5px/1.5 var(--font-ui);color:var(--ink-soft);margin:0 0 8px}
   .wk-foot{margin:8px 0 0;color:var(--ink)}
   .wk-scroll{overflow-x:auto}
-  .wk-table{border-collapse:collapse;font:12px var(--font-mono);background:#fff;min-width:100%}
+  .wk-table{border-collapse:collapse;font:12px var(--font-mono);background:var(--field);min-width:100%}
   .wk-table th,.wk-table td{border:1px solid var(--line);padding:4px 8px;text-align:left;white-space:nowrap}
-  .wk-table th{font:700 11px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;background:#EDEBE2}
+  .wk-table th{font:700 11px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;background:var(--th-bg)}
   .wk-compound{color:var(--brass-ink);font-weight:700}
 
   /* ---------- Challenge panel ---------- */
-  #challengePanel{width:350px;border-left:1.5px solid var(--line);background:#F1EFE8;display:none;flex-direction:column;min-height:0}
+  #challengePanel{width:350px;border-left:1.5px solid var(--line);background:var(--panel);display:none;flex-direction:column;min-height:0}
   #challengePanel.open{display:flex}
   #chTiers{padding:10px 12px;border-bottom:1.5px solid var(--line);overflow-y:auto;max-height:38%}
   .tier{margin-bottom:8px}
   .tier-h{font:700 12px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);display:flex;align-items:center;gap:6px;margin-bottom:4px}
   .tier-h .lock{font-size:12px}
-  .chbtn{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;font:600 13.5px var(--font-ui);padding:6px 9px;margin-bottom:3px;border:1.5px solid var(--line);border-radius:3px;background:#fff;cursor:pointer}
+  .chbtn{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;font:600 13.5px var(--font-ui);padding:6px 9px;margin-bottom:3px;border:1.5px solid var(--line);border-radius:3px;background:var(--field);cursor:pointer}
   .chbtn:hover{border-color:var(--dykem)}
   .chbtn.active{border-color:var(--dykem);background:var(--dykem-soft)}
   .chbtn.done .tick{color:var(--pass);font-weight:700}
@@ -107,21 +169,21 @@
   #chDetail{flex:1;overflow-y:auto;padding:12px}
   #chDetail h3{font-size:16px;letter-spacing:.02em;margin-bottom:6px}
   #chDetail .scenario{font-size:14px;line-height:1.5;margin-bottom:10px}
-  .given{font:13px var(--font-mono);background:#fff;border:1px solid var(--line);border-left:3px solid var(--brass);padding:7px 9px;margin-bottom:10px;line-height:1.6}
-  .predbox{border:1.5px solid var(--ink);border-radius:4px;background:#fff;padding:10px;margin-bottom:10px}
+  .given{font:13px var(--font-mono);background:var(--field);border:1px solid var(--line);border-left:3px solid var(--brass);padding:7px 9px;margin-bottom:10px;line-height:1.6}
+  .predbox{border:1.5px solid var(--ink);border-radius:4px;background:var(--field);padding:10px;margin-bottom:10px}
   .predbox h4{font:700 12px var(--font-ui);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
   .predrow{display:flex;align-items:center;gap:8px;margin-bottom:7px}
   .predrow label{font-size:14px;width:100px}
   .predrow input{font:15px var(--font-mono);width:90px;padding:5px 7px;border:1.5px solid var(--steel-edge);border-radius:3px}
   .dirbtns{display:flex;gap:5px}
-  .dirbtns button{font:600 12px var(--font-mono);padding:5px 12px;border:1.5px solid var(--steel-edge);border-radius:3px;background:#fff;cursor:pointer}
-  .dirbtns button.on{border-color:var(--dykem);background:var(--dykem);color:#fff}
+  .dirbtns button{font:600 12px var(--font-mono);padding:5px 12px;border:1.5px solid var(--steel-edge);border-radius:3px;background:var(--field);cursor:pointer}
+  .dirbtns button.on{border-color:var(--dykem);background:var(--dykem);color:var(--badge-text)}
   #runBtn{width:100%;font:700 13px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;padding:10px;border:none;border-radius:4px;background:var(--ink);color:var(--paper);cursor:pointer}
-  #runBtn:disabled{background:#B9B6AA;cursor:not-allowed}
+  #runBtn:disabled{background:var(--rule);cursor:not-allowed}
   #chResult{margin-top:10px;display:none}
-  #chResult table{width:100%;border-collapse:collapse;font:12px var(--font-mono);background:#fff}
+  #chResult table{width:100%;border-collapse:collapse;font:12px var(--font-mono);background:var(--field)}
   #chResult th,#chResult td{border:1px solid var(--line);padding:5px 7px;text-align:left}
-  #chResult th{font:700 12px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;background:#EDEBE2}
+  #chResult th{font:700 12px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;background:var(--th-bg)}
   #chResult td.ok{color:var(--pass);font-weight:700}
   #chResult td.bad{color:var(--fail);font-weight:700}
   #chProblems{font-size:12px;color:var(--fail);margin-top:8px;line-height:1.5}
@@ -129,21 +191,21 @@
   .verdict{font:700 14px var(--font-mono);letter-spacing:.18em;text-align:center;padding:8px;border-radius:3px;margin-top:10px}
   .verdict.pass{border:2px solid var(--pass);color:var(--pass)}
   .verdict.fail{border:2px solid var(--fail);color:var(--fail)}
-  .ghost-btn{width:100%;margin-top:10px;font:600 12px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;padding:8px;border:1.5px solid var(--ink);border-radius:4px;background:#fff;color:var(--ink);cursor:pointer}
+  .ghost-btn{width:100%;margin-top:10px;font:600 12px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;padding:8px;border:1.5px solid var(--ink);border-radius:4px;background:var(--field);color:var(--ink);cursor:pointer}
 
   /* ---------- Sandbox motor controls ---------- */
-  #motorCtl{display:flex;gap:10px;align-items:center;padding:6px 12px;border-top:1.5px solid var(--line);background:#F1EFE8;font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)}
+  #motorCtl{display:flex;gap:10px;align-items:center;padding:6px 12px;border-top:1.5px solid var(--line);background:var(--panel);font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)}
   #motorCtl input{font:14px var(--font-mono);width:70px;padding:3px 6px;border:1.5px solid var(--steel-edge);border-radius:3px}
 
   /* ---------- Modal ---------- */
-  #modalBack{position:fixed;inset:0;background:rgba(35,39,44,.5);display:none;align-items:center;justify-content:center;z-index:50}
+  #modalBack{position:fixed;inset:0;background:var(--scrim);display:none;align-items:center;justify-content:center;z-index:50}
   #modalBack.open{display:flex}
   #modal{background:var(--paper);border:2px solid var(--ink);border-radius:5px;max-width:560px;width:92%;max-height:84vh;overflow-y:auto;padding:22px}
   #modal h2{font-size:16px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
   #modal p,#modal li{font-size:15px;line-height:1.6;margin-bottom:8px}
   #modal ul{padding-left:20px;margin-bottom:10px}
   #modal .close{float:right;font:700 13px var(--font-ui);border:1.5px solid var(--ink);background:none;border-radius:3px;padding:5px 12px;cursor:pointer}
-  kbd{font:12px var(--font-mono);border:1px solid var(--steel-edge);border-bottom-width:2px;border-radius:3px;padding:1px 5px;background:#fff}
+  kbd{font:12px var(--font-mono);border:1px solid var(--steel-edge);border-bottom-width:2px;border-radius:3px;padding:1px 5px;background:var(--field)}
 
   /* ---------- Print report ---------- */
   #report{display:none}
@@ -193,7 +255,7 @@
     gap:6px 18px;
     padding:7px 14px;
     border-top:1.5px solid var(--line);
-    background:#F1EFE8;
+    background:var(--panel);
     font-size:12px;
     color:var(--ink-soft);
   }
@@ -231,6 +293,7 @@
     <button id="btnReport" title="Printable PDF report">Report / PDF</button>
     <button id="btnSave" title="Save design as a file">Save</button>
     <button id="btnLoad" title="Load a saved design">Load</button>
+    <button id="themeToggle" aria-label="Toggle light or dark theme" aria-pressed="false" title="Toggle light or dark theme">theme</button>
     <button id="btnHelp" aria-label="How to use the workbench" title="How to use the workbench">?</button>
   </div>
   <input type="file" id="fileInput" accept=".json,application/json" style="display:none">
@@ -654,13 +717,69 @@ window.addEventListener('resize', resize);
 function shaftById(id){ return S.shafts.find(s=>s.id===id); }
 function gearsOn(sid){ return S.gears.filter(g=>g.shaftId===sid); }
 
+/* ---------------------------------------------------------------------
+   CANVAS PALETTE
+   The scene is repainted every animation frame, so reading colours with
+   getComputedStyle per draw would force a style recalc 60x a second.
+   Read them once into PAL instead and refresh only when the theme changes.
+   --------------------------------------------------------------------- */
+const PAL = {};
+const PAL_KEYS = ['--paper','--grid-minor','--grid-major','--ink','--steel',
+  '--steel-back','--steel-edge','--steel-edge-back','--sel-front','--sel-back',
+  '--hub-ring','--hatch-front','--hatch-back','--dykem','--badge-text',
+  '--shaft-fill','--outline','--brass','--brass-ink','--gear-label',
+  '--plane-hatch','--tag-lite','--tag-dark'];
+function refreshPalette(){
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of PAL_KEYS) PAL[k] = cs.getPropertyValue(k).trim();
+}
+refreshPalette();
+
+/* ----- theme toggle -------------------------------------------------------
+   The pre-paint script in <head> already applied the stored/OS theme. The
+   scene repaints every frame from PAL, so switching only needs the attribute
+   swapped and the cache refreshed — no explicit redraw. */
+(function(){
+  const btn = document.getElementById('themeToggle');
+  const cur = () => document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  function sync(){
+    const t = cur();
+    btn.textContent = t === 'light' ? '☾ Dark' : '☀ Light';  // label = what you'd switch TO
+    btn.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false');
+  }
+  btn.addEventListener('click', () => {
+    const next = cur() === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('gtw-theme', next); } catch(e){}
+    refreshPalette();
+    sync();
+  });
+  sync();
+})();
+
+/* Exported PNGs and printed reports must read as ink on paper no matter which
+   theme the screen is using — a dark drawing dropped into the white title
+   block would look broken and waste toner. Render those with the light
+   palette, then restore. Setting the attribute recalcs styles synchronously,
+   so PAL is correct by the time fn() draws. */
+function withLightPalette(fn){
+  const prev = document.documentElement.getAttribute('data-theme');
+  document.documentElement.setAttribute('data-theme','light');
+  refreshPalette();
+  try { return fn(); }
+  finally {
+    if (prev) document.documentElement.setAttribute('data-theme', prev);
+    refreshPalette();
+  }
+}
+
 function drawGrid(c, w, h){
-  c.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--paper');
+  c.fillStyle = PAL['--paper'];
   c.fillRect(0,0,w,h);
   const minor=20, major=100;
   c.lineWidth=1;
-  for(let x=0;x<=w;x+=minor){ c.strokeStyle = (x%major===0)?'#D8D5C8':'#E7E5DC'; c.beginPath(); c.moveTo(x+.5,0); c.lineTo(x+.5,h); c.stroke(); }
-  for(let y=0;y<=h;y+=minor){ c.strokeStyle = (y%major===0)?'#D8D5C8':'#E7E5DC'; c.beginPath(); c.moveTo(0,y+.5); c.lineTo(w,y+.5); c.stroke(); }
+  for(let x=0;x<=w;x+=minor){ c.strokeStyle = (x%major===0)?PAL['--grid-major']:PAL['--grid-minor']; c.beginPath(); c.moveTo(x+.5,0); c.lineTo(x+.5,h); c.stroke(); }
+  for(let y=0;y<=h;y+=minor){ c.strokeStyle = (y%major===0)?PAL['--grid-major']:PAL['--grid-minor']; c.beginPath(); c.moveTo(0,y+.5); c.lineTo(w,y+.5); c.stroke(); }
 }
 
 function gearPath(c, r, teeth, angle){
@@ -700,15 +819,15 @@ function drawScene(c, w, h, solved, opts){
     c.save();
     c.translate(s.x, s.y);
     gearPath(c, r, g.teeth, s.angle||0);
-    c.fillStyle = back ? '#C4CCD4' : '#DCE1E6';
-    if (S.selectedGear===g.id) c.fillStyle = back ? '#B9C8DE' : '#CBDCF2';
+    c.fillStyle = back ? PAL['--steel-back'] : PAL['--steel'];
+    if (S.selectedGear===g.id) c.fillStyle = back ? PAL['--sel-back'] : PAL['--sel-front'];
     c.fill();
     // Back-plane gears get a diagonal hatch so the two planes are distinct
-    // without relying on the (near-imperceptible) gray difference alone.
+    // without relying on the (near-imperceptible) tonal difference alone.
     if (back){
       c.save();
       c.clip();                          // clip hatch to the gear body just filled
-      c.strokeStyle = 'rgba(70,80,90,.38)';
+      c.strokeStyle = PAL['--plane-hatch'];
       c.lineWidth = 1;
       for (let x=-r-r; x<=r+r; x+=7){
         c.beginPath(); c.moveTo(x, -r-r); c.lineTo(x+2*r, r+r); c.stroke();
@@ -716,7 +835,7 @@ function drawScene(c, w, h, solved, opts){
       c.restore();
     }
     c.lineWidth = back ? 2 : 1.6;
-    c.strokeStyle = back ? '#5A636C' : '#7E8892';
+    c.strokeStyle = back ? PAL['--steel-edge-back'] : PAL['--steel-edge'];
     if (back) c.setLineDash([5,3]);       // dashed rim = back plane
     gearPath(c, r, g.teeth, s.angle||0);  // re-trace path (clip consumed the fill path)
     c.stroke();
@@ -724,11 +843,11 @@ function drawScene(c, w, h, solved, opts){
     // pitch circle (drafting convention: thin dash-dot)
     c.setLineDash([6,3,1.5,3]);
     c.lineWidth = 0.8;
-    c.strokeStyle = '#9AA3AC';
+    c.strokeStyle = PAL['--hub-ring'];
     c.beginPath(); c.arc(0,0,r,0,Math.PI*2); c.stroke();
     c.setLineDash([]);
     // spokes hint of rotation
-    c.strokeStyle = back ? 'rgba(90,100,110,.5)' : 'rgba(126,136,146,.55)';
+    c.strokeStyle = back ? PAL['--hatch-back'] : PAL['--hatch-front'];
     c.lineWidth = 1.2;
     for (let k=0;k<3;k++){
       const a=(s.angle||0)+k*Math.PI*2/3;
@@ -739,7 +858,7 @@ function drawScene(c, w, h, solved, opts){
     if (S.showLabels){
       const mate = S.gears.find(o=>o.shaftId===g.shaftId && o.id!==g.id);
       const ly = (mate && mate.teeth < g.teeth) ? -r*0.8 : -r*0.5;
-      c.fillStyle = '#23272C';
+      c.fillStyle = PAL['--gear-label'];
       c.font = '600 '+Math.max(10, Math.min(14, r*0.32))+'px ui-monospace, Consolas, monospace';
       c.textAlign='center'; c.textBaseline='middle';
       c.fillText(g.teeth+'T', 0, ly);
@@ -752,10 +871,10 @@ function drawScene(c, w, h, solved, opts){
       const mate = S.gears.find(o=>o.shaftId===g.shaftId && o.id!==g.id);
       const ty = (mate && mate.teeth < g.teeth) ? r*0.8 : r*0.42;
       c.beginPath(); c.arc(0, ty, 7.5, 0, Math.PI*2);
-      c.fillStyle = back ? '#3A424B' : '#F6F5F0';
+      c.fillStyle = back ? PAL['--tag-dark'] : PAL['--tag-lite'];
       c.fill();
-      c.lineWidth = 1.2; c.strokeStyle = '#3A424B'; c.stroke();
-      c.fillStyle = back ? '#F6F5F0' : '#23272C';
+      c.lineWidth = 1.2; c.strokeStyle = PAL['--tag-dark']; c.stroke();
+      c.fillStyle = back ? PAL['--tag-lite'] : PAL['--tag-dark'];
       c.font = '700 10px ui-monospace, Consolas, monospace';
       c.textAlign='center'; c.textBaseline='middle';
       c.fillText(back ? 'B' : 'F', 0, ty);
@@ -767,24 +886,24 @@ function drawScene(c, w, h, solved, opts){
     const gl = gearsOn(s.id); if (!gl.length) continue;
     c.save(); c.translate(s.x, s.y);
     c.beginPath(); c.arc(0,0,7,0,Math.PI*2);
-    c.fillStyle='#F6F5F0'; c.fill();
-    c.lineWidth=2; c.strokeStyle='#23272C'; c.stroke();
-    c.beginPath(); c.arc(0,0,2.2,0,Math.PI*2); c.fillStyle='#23272C'; c.fill();
+    c.fillStyle=PAL['--outline']; c.fill();
+    c.lineWidth=2; c.strokeStyle=PAL['--ink']; c.stroke();
+    c.beginPath(); c.arc(0,0,2.2,0,Math.PI*2); c.fillStyle=PAL['--ink']; c.fill();
     const isM = S.motor && S.motor.shaftId===s.id;
     const isL = S.load && S.load.shaftId===s.id;
     if (isM || isL){
-      const col = isM ? '#7A5A16' : '#1D5FA8';
+      const col = isM ? PAL['--brass-ink'] : PAL['--dykem'];
       const txt = isM ? 'M' : 'L';
       c.beginPath(); c.arc(0,-0,0,0,0); // noop guard
       c.beginPath(); c.arc(14,-14,10,0,Math.PI*2);
       c.fillStyle=col; c.fill();
-      c.lineWidth=1.5; c.strokeStyle='#F6F5F0'; c.stroke();
-      c.fillStyle='#fff'; c.font='700 11px ui-monospace, Consolas, monospace';
+      c.lineWidth=1.5; c.strokeStyle=PAL['--outline']; c.stroke();
+      c.fillStyle=PAL['--badge-text']; c.font='700 11px ui-monospace, Consolas, monospace';
       c.textAlign='center'; c.textBaseline='middle'; c.fillText(txt, 14, -13.5);
       if (isM && isL){
         c.beginPath(); c.arc(-14,-14,10,0,Math.PI*2);
-        c.fillStyle='#1D5FA8'; c.fill(); c.strokeStyle='#F6F5F0'; c.stroke();
-        c.fillStyle='#fff'; c.fillText('L', -14, -13.5);
+        c.fillStyle=PAL['--dykem']; c.fill(); c.strokeStyle=PAL['--outline']; c.stroke();
+        c.fillStyle=PAL['--badge-text']; c.fillText('L', -14, -13.5);
       }
     }
     // direction arrows
@@ -794,13 +913,13 @@ function drawScene(c, w, h, solved, opts){
         const big = Math.max.apply(null, gl.map(g=>pitchRadius(g.teeth)));
         const ar = big + 12;
         const cw = w>0;
-        c.strokeStyle='#1D5FA8'; c.lineWidth=2;
+        c.strokeStyle=PAL['--dykem']; c.lineWidth=2;
         const a0 = -Math.PI/3, a1 = Math.PI/6;
         c.beginPath(); c.arc(0,0,ar, cw?a0:a1, cw?a1:a0, !cw); c.stroke();
         const tip = cw ? a1 : a0;
         const tx=Math.cos(tip)*ar, ty=Math.sin(tip)*ar;
         const tang = tip + (cw?Math.PI/2:-Math.PI/2);
-        c.fillStyle='#1D5FA8';
+        c.fillStyle=PAL['--dykem'];
         c.beginPath();
         c.moveTo(tx+Math.cos(tang)*7, ty+Math.sin(tang)*7);
         c.lineTo(tx+Math.cos(tang+2.5)*6, ty+Math.sin(tang+2.5)*6);
@@ -815,7 +934,7 @@ function drawScene(c, w, h, solved, opts){
     const t = S.toolDrag;
     const g = hitGear({x:t.x, y:t.y});
     const hub = g ? shaftById(g.shaftId) : hitHub({x:t.x, y:t.y});
-    const col = t.kind==='motor' ? '#7A5A16' : '#1D5FA8';
+    const col = t.kind==='motor' ? PAL['--brass-ink'] : PAL['--dykem'];
     c.save();
     if (hub){
       c.strokeStyle=col; c.lineWidth=2; c.setLineDash([5,4]);
@@ -825,8 +944,8 @@ function drawScene(c, w, h, solved, opts){
     c.globalAlpha=.85;
     c.beginPath(); c.arc(t.x, t.y, 12, 0, Math.PI*2);
     c.fillStyle=col; c.fill();
-    c.lineWidth=1.5; c.strokeStyle='#F6F5F0'; c.stroke();
-    c.fillStyle='#fff'; c.font='700 12px ui-monospace, Consolas, monospace';
+    c.lineWidth=1.5; c.strokeStyle=PAL['--outline']; c.stroke();
+    c.fillStyle=PAL['--badge-text']; c.font='700 12px ui-monospace, Consolas, monospace';
     c.textAlign='center'; c.textBaseline='middle';
     c.fillText(t.kind==='motor' ? 'M' : 'L', t.x, t.y);
     c.restore();
@@ -839,8 +958,8 @@ function drawScene(c, w, h, solved, opts){
     c.globalAlpha = 0.55;
     c.translate(pos.x, pos.y);
     gearPath(c, pitchRadius(pd.teeth), pd.teeth, 0);
-    c.fillStyle = '#DCE1E6'; c.fill();
-    c.lineWidth = 1.6; c.strokeStyle = '#1D5FA8'; c.stroke();
+    c.fillStyle = PAL['--steel']; c.fill();
+    c.lineWidth = 1.6; c.strokeStyle = PAL['--dykem']; c.stroke();
     c.restore();
   }
   // snap preview
@@ -848,7 +967,7 @@ function drawScene(c, w, h, solved, opts){
   if (activeSnap){
     const sn = activeSnap;
     c.save();
-    c.strokeStyle='#1D5FA8'; c.lineWidth=2; c.setLineDash([5,4]);
+    c.strokeStyle=PAL['--dykem']; c.lineWidth=2; c.setLineDash([5,4]);
     if (sn.type==='mesh'){
       c.beginPath(); c.arc(sn.x, sn.y, pitchRadius(sn.teeth), 0, Math.PI*2); c.stroke();
       const t=shaftById(sn.targetShaft);
@@ -1395,7 +1514,7 @@ function gearChipSVG(teeth){
     d+=(i? 'L':'M')+(Math.cos(a0)*r).toFixed(1)+' '+(Math.sin(a0)*r).toFixed(1)+' ';
     d+='L'+(Math.cos(a1)*(r+3)).toFixed(1)+' '+(Math.sin(a1)*(r+3)).toFixed(1)+' ';
   }
-  return '<svg width="26" height="26" viewBox="-13 -13 26 26"><path d="'+d+'Z" fill="#DCE1E6" stroke="#7E8892" stroke-width="1.2"/><circle r="2" fill="#23272C"/></svg>';
+  return '<svg width="26" height="26" viewBox="-13 -13 26 26"><path d="'+d+'Z" fill="var(--steel)" stroke="var(--steel-edge)" stroke-width="1.2"/><circle r="2" fill="var(--chip-label)"/></svg>';
 }
 const chipWrap=document.getElementById('gearChips');
 PALETTE_TEETH.forEach(t=>{
@@ -1691,7 +1810,9 @@ function snapshotDataURL(scale){
   off.width=CW*(scale||1); off.height=CH*(scale||1);
   const c=off.getContext('2d');
   c.scale(scale||1, scale||1);
-  drawScene(c, CW, CH, solved, {reveal:true});
+  // Always export ink-on-paper: the PNG gets pasted into a white title block
+  // and is often printed, so a dark-theme drawing would look broken there.
+  withLightPalette(() => drawScene(c, CW, CH, solved, {reveal:true}));
   return off.toDataURL('image/png');
 }
 function titleLines(){
