@@ -224,4 +224,6 @@ The tool has shipped and evolved past this draft. The following are authoritativ
 
 - **Device support (clarifies §5).** Targeted at laptops, desktops, and full-size tablets. A dedicated phone layout is not yet implemented; on-screen wording no longer implies phone support.
 
+- **Light & dark themes (extends §5).** Every colour — CSS and canvas alike — is a `data-theme`-scoped custom property; the canvas reads them once per theme change through a small cache (`PAL`) rather than per frame. A light "engineering paper" theme and a dark "Blueprint" theme ship; the choice follows the OS on first visit, persists to `localStorage`, and is applied before first paint to avoid a flash. Exported PNGs and printed reports always render with the light palette so they read as ink on paper.
+
 - **UI-logic test layer (extends §9).** Beyond the solver's `test.js`/`verify-html.js`, the non-canvas UI decisions are factored into a second pure module, `dev/logic.js` (download naming, palette limits, snap/grab geometry, progress serialize/merge, the reveal-gate state machine, "show the working" stage reconstruction). `dev/test-logic.js` unit-tests it and `dev/verify-logic.js` confirms the verbatim inline copy in `index.html` stays in sync. Canvas rendering and pointer interaction remain manual.

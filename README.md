@@ -17,6 +17,7 @@ An interactive gear train simulator — a tool for engineering education coverin
 - Progress (completed challenges, attempts, name) persists in the browser and survives a refresh
 - Optional "Show the working" panel that breaks the ratio down mesh by mesh (gated behind the prediction, so it never leaks an answer early)
 - Fully keyboard-operable, with a screen-reader description of the train and support for the OS "reduce motion" setting
+- Light ("engineering paper") and dark ("Blueprint") themes — every colour, canvas included, is theme-driven; the choice follows the OS on first visit, persists, and applies before first paint (exports always render ink-on-paper)
 - Sandbox mode, JSON save/load, PNG export with title block, print-to-PDF run record — all named with the student, challenge, and date
 
 ## Teacher notes
