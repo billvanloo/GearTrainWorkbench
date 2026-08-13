@@ -30,15 +30,23 @@ An interactive gear train simulator — a tool for engineering education coverin
 
 ## Development
 
-The physics solver is a pure module, developed and tested outside the browser:
+The physics solver and the non-canvas UI logic are pure modules, developed and tested outside the browser (no dependencies — just Node):
 
 ```
 cd dev
-node test.js         # 29 unit tests (ratios, torque conservation, direction, error cases)
-node verify-html.js  # confirms the inline copy in index.html matches, and validates every challenge
+node test.js          # 29 solver unit tests (ratios, torque conservation, direction, error cases)
+node verify-html.js   # confirms the inline solver in index.html matches, and validates every challenge
+node test-logic.js    # 40 UI-logic unit tests (filenames, palette limits, snap geometry,
+                      #   progress serialize/merge, the reveal-gate machine, "show the working")
+node verify-logic.js  # confirms the inline UI-logic copy in index.html is in sync (text + behavior)
 ```
 
-If you edit the solver, edit `dev/solver.js` first, run the tests, then sync the inline copy in `index.html` and run `verify-html.js`.
+Two pure cores live in `dev/` and are embedded verbatim in `index.html`, where thin DOM wrappers delegate to them:
+
+- **`dev/solver.js`** — the physics (meshes, speeds, torques, direction, validation).
+- **`dev/logic.js`** — the non-canvas decisions: download naming, per-challenge palette limits, snap/grab geometry, progress serialization + save-file merge, the reveal-gate state machine, and the motor→load stage reconstruction behind "Show the working".
+
+If you edit either, change the module in `dev/` first, run its unit tests, then sync the inline copy in `index.html` (the block between the `__PURE_BEGIN__`/`__PURE_END__` markers) and run the matching `verify-*.js`. Canvas rendering and pointer interaction are still verified by hand.
 
 `docs/spec.md` is the original functional specification.
 
