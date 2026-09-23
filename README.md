@@ -14,7 +14,9 @@ An interactive gear train simulator — a tool for engineering education coverin
 - Two axial planes so compound trains are physically valid — gears only mesh on the same plane, marked with an F/B tag on every hub and a hatch on the back plane
 - Prediction gate in challenge mode: students commit to predicted output RPM, torque, and direction before the solver runs — and the readout re-hides after every attempt, so each run needs a fresh prediction
 - Four gated challenge tiers, from simple meshes through a design brief (a winch requiring 14–16 RPM and ≥ 60 N·cm in ≤ 6 gears); in a challenge the palette is limited to the sizes the brief lists
-- Progress (completed challenges, attempts, name) persists in the browser and survives a refresh
+- Each challenge (and the sandbox) keeps its own board — switching never carries gears into another brief, and you can return to pick up where you left off
+- Progress (completed challenges, attempts, name) and every board persist in the browser and survive a refresh
+- If the window shrinks, the whole train shifts back onto the sheet in one piece (meshes stay intact); anything that still cannot fit is marked with an arrow at the edge
 - Optional "Show the working" panel that breaks the ratio down mesh by mesh (gated behind the prediction, so it never leaks an answer early)
 - Fully keyboard-operable, with a screen-reader description of the train and support for the OS "reduce motion" setting
 - Light ("engineering paper") and dark ("Blueprint") themes — every colour, canvas included, is theme-driven; the choice follows the OS on first visit, persists, and applies before first paint (exports always render ink-on-paper)
@@ -37,8 +39,9 @@ The physics solver and the non-canvas UI logic are pure modules, developed and t
 cd dev
 node test.js          # 29 solver unit tests (ratios, torque conservation, direction, error cases)
 node verify-html.js   # confirms the inline solver in index.html matches, and validates every challenge
-node test-logic.js    # 40 UI-logic unit tests (filenames, palette limits, snap geometry,
-                      #   progress serialize/merge, the reveal-gate machine, "show the working")
+node test-logic.js    # 62 UI-logic unit tests (filenames, palette limits, snap geometry,
+                      #   progress serialize/merge, the reveal-gate machine, "show the working",
+                      #   keeping the train on a shrinking sheet, per-challenge boards)
 node verify-logic.js  # confirms the inline UI-logic copy in index.html is in sync (text + behavior)
 ```
 

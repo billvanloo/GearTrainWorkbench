@@ -384,7 +384,7 @@
       <li>Meshed gears turn opposite directions; gears on one shaft turn together.</li>
       <li>Ideal train: speed ÷ R, torque × R. Power in = power out.</li>
     </ul>
-    <p><strong>Challenge mode:</strong> build the train, then enter your <em>predicted</em> output before you run. The workbench compares your prediction to the actual result — calculate first, then check. Each run re-hides the readout, so every attempt needs a fresh prediction; <em>Predict again</em> or <em>Reset this challenge</em> starts over. In a challenge the palette is limited to the gear sizes the brief lists.</p>
+    <p><strong>Challenge mode:</strong> build the train, then enter your <em>predicted</em> output before you run. The workbench compares your prediction to the actual result — calculate first, then check. Each run re-hides the readout, so every attempt needs a fresh prediction; <em>Predict again</em> or <em>Reset this challenge</em> starts over. In a challenge the palette is limited to the gear sizes the brief lists. Each challenge keeps its own board, so you can switch away and come back to your work.</p>
     <p><strong>Your progress is saved</strong> in this browser — completed challenges, attempts, and your name survive a refresh. Downloads (image, report, save file) are named with your name, the challenge, and the date, so type your name in the Name box first.</p>
     <p><strong>Keyboard (no mouse needed):</strong> focus the sheet (Tab to it), then:</p>
     <ul>
@@ -513,7 +513,7 @@ function evaluateChallenge(ch, state, solved, pred){
    ===================================================================== */
 const CHALLENGES = [
   { tier:1, tierName:'Simple Meshes', id:'1.1', title:'First Mesh',
-    scenario:'A display turntable needs to spin at half the motor speed. Connect the motor to a 12-tooth gear driving a 24-tooth gear with the load.',
+    scenario:'A display turntable needs to spin at half the motor speed. Build a 12-tooth gear driving a 24-tooth gear. Attach the motor to the 12T and the load to the 24T.',
     motor:{rpm:120, torque:10},
     allowed:[12,24], constraints:{maxGears:2},
     target:{rpm:60, torque:20, dir:'CCW', tolPct:2} },
@@ -561,11 +561,13 @@ const SNAP_TOLERANCE = 24;  // px window for snapping into mesh while dragging
 
 // Filesystem-safe download base: student, context, and date, so a class of
 // submissions is not a pile of identical files. opts: {student, mode,
-// challengeId, dateISO}.
+// challengeId, dateISO}. The result never contains a period: print-to-PDF
+// seeds the filename from it and cannot append ".pdf" itself, and macOS would
+// read anything after a period (e.g. challenge "2.2") as the file extension.
 function slug(s) { return (s || '').trim().replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'unnamed'; }
 function buildExportName(opts) {
   const who = slug(opts.student);
-  const ctx = (opts.mode === 'challenge' && opts.challengeId) ? 'challenge-' + opts.challengeId : 'sandbox';
+  const ctx = (opts.mode === 'challenge' && opts.challengeId) ? 'challenge-' + slug(String(opts.challengeId)) : 'sandbox';
   return 'gear-train_' + who + '_' + ctx + '_' + opts.dateISO;
 }
 
@@ -671,6 +673,64 @@ function motorToLoadStages(gears, motorShaft, loadShaft, meshes, reachableHas) {
   while (cur !== motorShaft) { const p = prev[cur]; if (!p) return null; stages.unshift(p.edge); cur = p.from; }
   return stages;
 }
+
+// Rigid shift {dx, dy} that brings the whole layout back onto a W x H sheet
+// after the canvas shrinks. Everything moves together, so meshes (which depend
+// on exact centre distances) survive; clamping shafts one by one would break
+// them. Only an axis that spills off the sheet moves. A layout bigger than the
+// sheet is pinned to the top/left edge (the rest is reported by offSheetShafts).
+function fitToSheet(shafts, gears, pitchRadius, W, H) {
+  if (!shafts.length || !(W > 0) || !(H > 0)) return { dx: 0, dy: 0 };
+  const rad = {};
+  gears.forEach(g => { rad[g.shaftId] = Math.max(rad[g.shaftId] || 0, pitchRadius(g.teeth)); });
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  shafts.forEach(s => {
+    const r = rad[s.id] || 0;
+    x0 = Math.min(x0, s.x - r); x1 = Math.max(x1, s.x + r);
+    y0 = Math.min(y0, s.y - r); y1 = Math.max(y1, s.y + r);
+  });
+  const axis = (lo, hi, size) => (hi - lo > size || lo < 0) ? -lo : (hi > size ? size - hi : 0);
+  return { dx: axis(x0, x1, W), dy: axis(y0, y1, H) };
+}
+
+// Shafts whose hub lies outside the W x H sheet: gears the student can neither
+// see nor grab, which still count toward the challenge.
+function offSheetShafts(shafts, W, H) {
+  return shafts.filter(s => s.x < 0 || s.x > W || s.y < 0 || s.y > H);
+}
+
+// Per-challenge boards. The sandbox and each challenge keep their own board,
+// so switching never carries gears (possibly forbidden sizes) from one brief
+// into another. A board is {gears, shafts, motor, load}.
+function boardKeyFor(mode, challengeId) {
+  return mode === 'challenge' ? 'challenge-' + (challengeId || 'none') : 'sandbox';
+}
+function isBoardEmpty(b) { return !b || (!(b.gears && b.gears.length) && !b.motor && !b.load); }
+// Deep copy holding only what persists (shaft animation angle is dropped).
+function copyBoard(b) {
+  if (!b) return { gears: [], shafts: [], motor: null, load: null };
+  return JSON.parse(JSON.stringify({
+    gears: b.gears || [], shafts: (b.shafts || []).map(s => ({ id: s.id, x: s.x, y: s.y })),
+    motor: b.motor || null, load: b.load || null
+  }));
+}
+// Stash `current` under fromKey and fetch the board for toKey (empty if none).
+// Returns {boards, board}: a new map (input untouched) and a copy to show.
+function swapBoard(boards, fromKey, current, toKey) {
+  const out = Object.assign({}, boards);
+  if (isBoardEmpty(current)) delete out[fromKey]; else out[fromKey] = copyBoard(current);
+  return { boards: out, board: copyBoard(out[toKey]) };
+}
+// Highest numeric id suffix across all boards, so new ids never collide with
+// a restored board's.
+function maxIdNum(boards) {
+  let n = 0;
+  for (const k in boards) {
+    const b = boards[k] || {};
+    [...(b.gears || []), ...(b.shafts || [])].forEach(o => { const m = /\d+$/.exec(o.id); if (m) n = Math.max(n, Number(m[0])); });
+  }
+  return n;
+}
 // __PURE_END__
 
 /* =====================================================================
@@ -711,8 +771,23 @@ function resize(){
   CW = r.width; CH = r.height;
   canvas.width = Math.round(CW*DPR); canvas.height = Math.round(CH*DPR);
   ctx.setTransform(DPR,0,0,DPR,0,0);
+  keepOnSheet();
 }
 window.addEventListener('resize', resize);
+// Gear positions are absolute canvas pixels, so when the sheet shrinks (window
+// resize, challenge panel opening) or an older/other board is restored, shift
+// the whole layout back into view as one rigid piece so meshes survive. If it
+// still cannot fit, the leftovers get edge markers (drawOffSheetMarkers).
+let lastOffSheet=0;
+function keepOnSheet(){
+  if (S.drag || !(CW>0 && CH>0)) return;
+  const f=fitToSheet(S.shafts, S.gears, pitchRadius, CW, CH);
+  if (f.dx || f.dy) S.shafts.forEach(s=>{ s.x+=f.dx; s.y+=f.dy; });
+  const off=offSheetShafts(S.shafts, CW, CH).length;
+  if (off && off!==lastOffSheet) toast('The sheet is too small for this train — '+off+' shaft'+(off>1?'s are':' is')+' off the edge (see the arrows). Widen the window.');
+  lastOffSheet=off;
+  updateDRO();
+}
 
 function shaftById(id){ return S.shafts.find(s=>s.id===id); }
 function gearsOn(sid){ return S.gears.filter(g=>g.shaftId===sid); }
@@ -978,6 +1053,21 @@ function drawScene(c, w, h, solved, opts){
     }
     c.restore();
   }
+  if (opts.markOffSheet) drawOffSheetMarkers(c, w, h);
+}
+// An arrow on the sheet edge pointing toward each hub that lies beyond it, so
+// a gear that still counts toward the challenge is never silently invisible.
+function drawOffSheetMarkers(c, w, h){
+  const m=14;
+  for (const s of offSheetShafts(S.shafts, w, h)){
+    const x=Math.max(m,Math.min(w-m,s.x)), y=Math.max(m,Math.min(h-m,s.y));
+    c.save();
+    c.translate(x,y); c.rotate(Math.atan2(s.y-y, s.x-x));
+    c.beginPath(); c.moveTo(11,0); c.lineTo(-7,-9); c.lineTo(-7,9); c.closePath();
+    c.fillStyle=PAL['--dykem']; c.fill();
+    c.lineWidth=1.5; c.strokeStyle=PAL['--outline']; c.stroke();
+    c.restore();
+  }
 }
 
 /* =====================================================================
@@ -993,6 +1083,7 @@ function resolve(){
   updateRunBtn();
   updateTrainSummary();
   updateWorking();
+  scheduleSaveBoards();
 }
 // Reconstruct the shaft path from the motor to the load as an ordered list of
 // mesh stages, using only the solver's own results. Returns [{driver, driven}]
@@ -1087,7 +1178,10 @@ function updateDRO(){
     set('droRatio','—',true); set('droRpm','—',true); set('droTorque','—',true); set('droDir','—',true);
   }
   const msg = droEl('droMsg');
-  msg.textContent = (solved && solved.error) ? solved.error : (S.gears.length? '' : 'Place gears to begin.');
+  let text = (solved && solved.error) ? solved.error : (S.gears.length? '' : 'Place gears to begin.');
+  const off = (CW>0 && CH>0) ? offSheetShafts(S.shafts, CW, CH).length : 0;
+  if (off) text += (text?' ':'')+'('+off+' shaft'+(off>1?'s':'')+' off the edge of the sheet — widen the window, or press Undo / Reset.)';
+  msg.textContent = text;
   msg.classList.toggle('err', !!(solved && !solved.ok));
 }
 
@@ -1108,7 +1202,7 @@ function tick(t){
       }
     }
   }
-  drawScene(ctx, CW, CH, solved, {reveal: S.mode==='sandbox' || S.revealed});
+  drawScene(ctx, CW, CH, solved, {reveal: S.mode==='sandbox' || S.revealed, markOffSheet:true});
   requestAnimationFrame(tick);
 }
 
@@ -1449,22 +1543,26 @@ function placeGearAt(teeth, pos, snap){
 }
 
 /* ---------- Undo history ---------- */
-const undoStack=[];
+// One undo history per board, so Undo never pulls another challenge's gears in.
+const undoStacks={};
+function curUndo(){ return undoStacks[boardKey] || (undoStacks[boardKey]=[]); }
 function captureState(){
   return JSON.stringify({ gears:S.gears, shafts:S.shafts.map(s=>({id:s.id,x:s.x,y:s.y})), motor:S.motor, load:S.load });
 }
 function pushUndo(snap){
-  undoStack.push(snap||captureState());
-  if (undoStack.length>60) undoStack.shift();
+  const st=curUndo();
+  st.push(snap||captureState());
+  if (st.length>60) st.shift();
 }
 function undo(){
-  const snap=undoStack.pop();
+  const snap=curUndo().pop();
   if (!snap){ toast('Nothing to undo.'); return; }
   const d=JSON.parse(snap);
   S.gears=d.gears;
   S.shafts=d.shafts.map(s=>({...s, angle:0}));
   S.motor=d.motor; S.load=d.load;
   S.selectedGear=null; S.drag=null;
+  keepOnSheet();
   resolve();
   toast('Undone.');
 }
@@ -1628,6 +1726,51 @@ document.getElementById('motorRpm').addEventListener('input',e=>{ S.motorSpecs.r
 document.getElementById('motorTorque').addEventListener('input',e=>{ S.motorSpecs.torque=Number(e.target.value)||10; resolve(); });
 
 /* =====================================================================
+   PER-CHALLENGE BOARDS
+   The sandbox and each challenge keep their own board. Switching stashes the
+   outgoing one and restores the incoming one (empty the first time), so a
+   train never carries into a brief that forbids its sizes. Boards persist in
+   localStorage so they also survive a refresh.
+   ===================================================================== */
+const BOARDS_KEY='gtw.boards.v1';
+let boards={};                       // key -> {gears, shafts, motor, load}
+let boardKey='sandbox';              // board currently on the sheet
+function currentBoard(){ return {gears:S.gears, shafts:S.shafts, motor:S.motor, load:S.load}; }
+function applyBoard(b){
+  S.gears=b.gears; S.shafts=b.shafts.map(s=>({...s, angle:0}));
+  S.motor=b.motor; S.load=b.load;
+  S.selectedGear=null; S.drag=null;
+}
+function switchBoard(key){
+  if (key===boardKey) return;
+  const leaving=boardKey, hadWork=!isBoardEmpty(currentBoard());
+  const r=swapBoard(boards, leaving, currentBoard(), key);
+  boards=r.boards; boardKey=key;
+  applyBoard(r.board);
+  keepOnSheet();
+  saveBoards();
+  if (hadWork) toast('Your '+(leaving==='sandbox'?'sandbox':'challenge '+leaving.replace(/^challenge-/,''))+' board is saved — switch back any time to pick it up.');
+}
+function saveBoards(){
+  try{
+    const all=swapBoard(boards, boardKey, currentBoard(), boardKey).boards;
+    localStorage.setItem(BOARDS_KEY, JSON.stringify(all));
+  }catch(e){ /* private mode / quota — boards stay in memory only */ }
+}
+let saveBoardsTimer=null;
+function scheduleSaveBoards(){ clearTimeout(saveBoardsTimer); saveBoardsTimer=setTimeout(saveBoards, 400); }
+window.addEventListener('pagehide', saveBoards);
+function loadBoards(){
+  try{
+    const raw=localStorage.getItem(BOARDS_KEY); if(!raw) return;
+    const d=JSON.parse(raw); if(!d||typeof d!=='object') return;
+    boards=d;
+    S.idc=Math.max(S.idc, maxIdNum(boards));
+    if (boards[boardKey]) applyBoard(copyBoard(boards[boardKey]));
+  }catch(e){ boards={}; /* corrupt or unavailable — start fresh */ }
+}
+
+/* =====================================================================
    MODES + CHALLENGE SYSTEM
    ===================================================================== */
 const panel=document.getElementById('challengePanel');
@@ -1635,6 +1778,7 @@ document.getElementById('modeSandbox').addEventListener('click',()=>setMode('san
 document.getElementById('modeChallenge').addEventListener('click',()=>setMode('challenge'));
 function setMode(m){
   S.mode=m;
+  switchBoard(boardKeyFor(m, m==='challenge' && S.activeChallenge ? S.activeChallenge.id : null));
   document.getElementById('modeSandbox').classList.toggle('on', m==='sandbox');
   document.getElementById('modeChallenge').classList.toggle('on', m==='challenge');
   panel.classList.toggle('open', m==='challenge');
@@ -1675,6 +1819,7 @@ function renderTierList(){
 let pred={rpm:'',torque:'',dir:null};
 function openChallenge(id){
   const ch=CHALLENGES.find(c=>c.id===id); if(!ch) return;
+  switchBoard(boardKeyFor('challenge', id));
   S.activeChallenge=ch;
   S.motorSpecs={rpm:ch.motor.rpm, torque:ch.motor.torque};
   Object.assign(S, gateStep(S,'OPEN_CHALLENGE')); S.lastRun=null;
@@ -1697,6 +1842,7 @@ function renderChallengeDetail(){
     '<h3>'+ch.id+' · '+ch.title+'</h3>'+
     '<p class="scenario">'+ch.scenario+'</p>'+
     '<div class="given">GIVEN — Motor: '+ch.motor.rpm+' RPM CW · '+ch.motor.torque+' N·cm'+
+      '<br>Attach: Motor to the input gear · Load to the output gear'+
       (ch.allowed? '<br>Gears available: '+ch.allowed.map(t=>t+'T').join(', '):'')+
       (cons.length? '<br>Constraints: '+cons.join(' · '):'')+'</div>'+
     '<div class="predbox"><h4>Your prediction (required to run)</h4>'+
@@ -1869,7 +2015,7 @@ document.getElementById('btnPng').addEventListener('click',()=>{
   img.src=snapshotDataURL(1);
 });
 
-document.getElementById('btnReport').addEventListener('click',()=>{
+document.getElementById('btnReport').addEventListener('click',async ()=>{
   const t=titleLines();
   const img=snapshotDataURL(1);
   let gearRows='';
@@ -1910,6 +2056,10 @@ document.getElementById('btnReport').addEventListener('click',()=>{
     '<div class="sig"><span>Student signature</span><span>Teacher check</span></div></div>';
   // Most browsers seed the "Save as PDF" filename from document.title, so give
   // the print the same student/context/date base, then restore the page title.
+  // The drawing is an inline data: URL; print() snapshots the page at once, so
+  // wait for it to decode or large boards intermittently print as text only.
+  const reportImg=document.querySelector('#report img');
+  if (reportImg) await reportImg.decode().catch(()=>{});
   const prevTitle=document.title;
   document.title=exportBase();
   const restore=()=>{ document.title=prevTitle; window.removeEventListener('afterprint',restore); };
@@ -1967,7 +2117,8 @@ document.getElementById('fileInput').addEventListener('change',ev=>{
         document.getElementById('motorRpm').value=S.motorSpecs.rpm;
         document.getElementById('motorTorque').value=S.motorSpecs.torque; }
       let maxN=0; [...S.gears,...S.shafts].forEach(o=>{const m=/\d+$/.exec(o.id); if(m) maxN=Math.max(maxN,Number(m[0]));});
-      S.idc=maxN;
+      S.idc=Math.max(maxN, maxIdNum(boards));
+      keepOnSheet();
       // v2 files carry the student's name and progress. Merge non-destructively:
       // never wipe progress already made in this session, and only fill the name
       // box if it is empty. v1 files simply lack these fields.
@@ -1996,6 +2147,7 @@ if (/[?&]unlock=all/.test(location.search)){
 // Restore saved progress (completed challenges, attempt counts, name) so a
 // refresh or closed tab does not wipe a student's work.
 loadProgress();
+loadBoards();
 document.getElementById('studentName').addEventListener('input', saveProgress);
 resize();
 // Layout changes (challenge panel open/close, motor bar show/hide) resize the

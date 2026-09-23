@@ -39,7 +39,9 @@ exports.GRAB_MIN=GRAB_MIN; exports.SNAP_TOLERANCE=SNAP_TOLERANCE; exports.slug=s
 exports.buildExportName=buildExportName; exports.isGearAllowed=isGearAllowed; exports.grabRadius=grabRadius;
 exports.overlapsSameLayer=overlapsSameLayer; exports.crossPlaneNearMesh=crossPlaneNearMesh;
 exports.serializeProgress=serializeProgress; exports.mergeLoadedProgress=mergeLoadedProgress;
-exports.gateStep=gateStep; exports.motorToLoadStages=motorToLoadStages;`)(sandbox);
+exports.gateStep=gateStep; exports.motorToLoadStages=motorToLoadStages;
+exports.fitToSheet=fitToSheet; exports.offSheetShafts=offSheetShafts; exports.boardKeyFor=boardKeyFor;
+exports.isBoardEmpty=isBoardEmpty; exports.copyBoard=copyBoard; exports.swapBoard=swapBoard; exports.maxIdNum=maxIdNum;`)(sandbox);
 
 failed += runTests(sandbox, 'inline copy');
 

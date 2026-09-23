@@ -18,7 +18,11 @@ function runTests(L, label) {
   eq('exportName sandbox', L.buildExportName({ student: 'Grace Hopper', mode: 'sandbox', challengeId: null, dateISO: '2026-08-13' }),
     'gear-train_Grace-Hopper_sandbox_2026-08-13');
   eq('exportName challenge', L.buildExportName({ student: '', mode: 'challenge', challengeId: '3.1', dateISO: '2026-08-13' }),
-    'gear-train_unnamed_challenge-3.1_2026-08-13');
+    'gear-train_unnamed_challenge-3-1_2026-08-13');
+  // Print-to-PDF cannot append ".pdf" when the seeded name already looks like
+  // it has an extension (macOS reads ".2_2026-..." as one), so: no periods.
+  eq('exportName has no period for any challenge id', ['1.1', '2.2', '3.1', '4.1'].some(id =>
+    L.buildExportName({ student: 'A.B', mode: 'challenge', challengeId: id, dateISO: '2026-09-22' }).indexOf('.') !== -1), false);
   eq('exportName sandbox mode ignores challengeId', L.buildExportName({ student: 'X', mode: 'sandbox', challengeId: '3.1', dateISO: '2026-01-01' }),
     'gear-train_X_sandbox_2026-01-01');
 
@@ -93,6 +97,44 @@ function runTests(L, label) {
   eq('compound: stage2 driver rides s2', st2[1].driver.shaftId, 's2');
   eq('same shaft motor==load -> []', L.motorToLoadStages(cg, 's1', 's1', [], has), []);
   eq('unreachable load -> null', L.motorToLoadStages(cg, 's1', 's9', [['a', 'b']], has), null);
+
+  // ---- fitToSheet / offSheetShafts (bug report item 3) ----
+  // A 12T->24T mesh near the right edge of a 1420px sheet; the sheet then
+  // shrinks to 1070 (the challenge panel opening).
+  const r12 = pitchRadius(12), r24 = pitchRadius(24);
+  const fs = [{ id: 's1', x: 1000, y: 300 }, { id: 's2', x: 1000 + r12 + r24, y: 300 }];
+  const fg = [{ id: 'a', teeth: 12, shaftId: 's1' }, { id: 'b', teeth: 24, shaftId: 's2' }];
+  eq('fit: nothing to do when on sheet', L.fitToSheet(fs, fg, pitchRadius, 1420, 800), { dx: 0, dy: 0 });
+  eq('fit: shrink strands the output gear', L.offSheetShafts(fs, 1070, 800).map(s => s.id), ['s2']);
+  const f = L.fitToSheet(fs, fg, pitchRadius, 1070, 800);
+  const moved = fs.map(s => ({ id: s.id, x: s.x + f.dx, y: s.y + f.dy }));
+  eq('fit: every hub back on the sheet', L.offSheetShafts(moved, 1070, 800), []);
+  eq('fit: every gear fully inside', moved.every((s, i) => s.x + pitchRadius(fg[i].teeth) <= 1070 + 1e-9), true);
+  eq('fit: rigid move keeps the mesh distance', Math.abs(Math.hypot(moved[1].x - moved[0].x, moved[1].y - moved[0].y) - (r12 + r24)) < 1e-9, true);
+  eq('fit: vertical untouched when it fits', f.dy, 0);
+  eq('fit: layout wider than sheet pins to left edge', L.fitToSheet(fs, fg, pitchRadius, 50, 800).dx, -(1000 - r12));
+  eq('fit: off the left edge moves right', L.fitToSheet([{ id: 's1', x: -10, y: 300 }], [{ id: 'a', teeth: 12, shaftId: 's1' }], pitchRadius, 500, 800).dx, 10 + r12);
+  eq('fit: empty board', L.fitToSheet([], [], pitchRadius, 500, 500), { dx: 0, dy: 0 });
+  eq('fit: zero-size sheet ignored', L.fitToSheet(fs, fg, pitchRadius, 0, 0), { dx: 0, dy: 0 });
+
+  // ---- per-challenge boards (bug report item 2) ----
+  eq('boardKey sandbox', L.boardKeyFor('sandbox', '1.1'), 'sandbox');
+  eq('boardKey challenge', L.boardKeyFor('challenge', '2.2'), 'challenge-2.2');
+  eq('boardKey challenge none', L.boardKeyFor('challenge', null), 'challenge-none');
+  const b11 = { gears: [{ id: 'g1', teeth: 12, shaftId: 's2' }], shafts: [{ id: 's2', x: 5, y: 6, angle: 3 }], motor: { shaftId: 's2' }, load: null };
+  let sw = L.swapBoard({}, 'challenge-1.1', b11, 'challenge-2.2');
+  eq('swap: new challenge starts empty', sw.board, { gears: [], shafts: [], motor: null, load: null });
+  eq('swap: outgoing board stashed without angle', sw.boards['challenge-1.1'].shafts, [{ id: 's2', x: 5, y: 6 }]);
+  sw = L.swapBoard(sw.boards, 'challenge-2.2', sw.board, 'challenge-1.1');
+  eq('swap: returning restores the board', sw.board.gears, b11.gears);
+  eq('swap: empty outgoing board is not kept', 'challenge-2.2' in sw.boards, false);
+  sw.board.gears.push({ id: 'g9' });
+  eq('swap: returned board is a copy', sw.boards['challenge-1.1'].gears.length, 1);
+  const before = { sandbox: b11 };
+  L.swapBoard(before, 'sandbox', { gears: [], shafts: [], motor: null, load: null }, 'challenge-1.1');
+  eq('swap: input map not mutated', 'sandbox' in before, true);
+  eq('isBoardEmpty motor only is not empty', L.isBoardEmpty({ gears: [], motor: { shaftId: 's1' } }), false);
+  eq('maxIdNum across boards', L.maxIdNum({ a: b11, b: { gears: [{ id: 'g14' }], shafts: [{ id: 's3' }] } }), 14);
 
   const tag = label ? ` (${label})` : '';
   console.log(`${passed} passed, ${failed} failed${tag}`);

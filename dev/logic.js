@@ -17,11 +17,13 @@ const SNAP_TOLERANCE = 24;  // px window for snapping into mesh while dragging
 
 // Filesystem-safe download base: student, context, and date, so a class of
 // submissions is not a pile of identical files. opts: {student, mode,
-// challengeId, dateISO}.
+// challengeId, dateISO}. The result never contains a period: print-to-PDF
+// seeds the filename from it and cannot append ".pdf" itself, and macOS would
+// read anything after a period (e.g. challenge "2.2") as the file extension.
 function slug(s) { return (s || '').trim().replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'unnamed'; }
 function buildExportName(opts) {
   const who = slug(opts.student);
-  const ctx = (opts.mode === 'challenge' && opts.challengeId) ? 'challenge-' + opts.challengeId : 'sandbox';
+  const ctx = (opts.mode === 'challenge' && opts.challengeId) ? 'challenge-' + slug(String(opts.challengeId)) : 'sandbox';
   return 'gear-train_' + who + '_' + ctx + '_' + opts.dateISO;
 }
 
@@ -127,10 +129,69 @@ function motorToLoadStages(gears, motorShaft, loadShaft, meshes, reachableHas) {
   while (cur !== motorShaft) { const p = prev[cur]; if (!p) return null; stages.unshift(p.edge); cur = p.from; }
   return stages;
 }
+
+// Rigid shift {dx, dy} that brings the whole layout back onto a W x H sheet
+// after the canvas shrinks. Everything moves together, so meshes (which depend
+// on exact centre distances) survive; clamping shafts one by one would break
+// them. Only an axis that spills off the sheet moves. A layout bigger than the
+// sheet is pinned to the top/left edge (the rest is reported by offSheetShafts).
+function fitToSheet(shafts, gears, pitchRadius, W, H) {
+  if (!shafts.length || !(W > 0) || !(H > 0)) return { dx: 0, dy: 0 };
+  const rad = {};
+  gears.forEach(g => { rad[g.shaftId] = Math.max(rad[g.shaftId] || 0, pitchRadius(g.teeth)); });
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  shafts.forEach(s => {
+    const r = rad[s.id] || 0;
+    x0 = Math.min(x0, s.x - r); x1 = Math.max(x1, s.x + r);
+    y0 = Math.min(y0, s.y - r); y1 = Math.max(y1, s.y + r);
+  });
+  const axis = (lo, hi, size) => (hi - lo > size || lo < 0) ? -lo : (hi > size ? size - hi : 0);
+  return { dx: axis(x0, x1, W), dy: axis(y0, y1, H) };
+}
+
+// Shafts whose hub lies outside the W x H sheet: gears the student can neither
+// see nor grab, which still count toward the challenge.
+function offSheetShafts(shafts, W, H) {
+  return shafts.filter(s => s.x < 0 || s.x > W || s.y < 0 || s.y > H);
+}
+
+// Per-challenge boards. The sandbox and each challenge keep their own board,
+// so switching never carries gears (possibly forbidden sizes) from one brief
+// into another. A board is {gears, shafts, motor, load}.
+function boardKeyFor(mode, challengeId) {
+  return mode === 'challenge' ? 'challenge-' + (challengeId || 'none') : 'sandbox';
+}
+function isBoardEmpty(b) { return !b || (!(b.gears && b.gears.length) && !b.motor && !b.load); }
+// Deep copy holding only what persists (shaft animation angle is dropped).
+function copyBoard(b) {
+  if (!b) return { gears: [], shafts: [], motor: null, load: null };
+  return JSON.parse(JSON.stringify({
+    gears: b.gears || [], shafts: (b.shafts || []).map(s => ({ id: s.id, x: s.x, y: s.y })),
+    motor: b.motor || null, load: b.load || null
+  }));
+}
+// Stash `current` under fromKey and fetch the board for toKey (empty if none).
+// Returns {boards, board}: a new map (input untouched) and a copy to show.
+function swapBoard(boards, fromKey, current, toKey) {
+  const out = Object.assign({}, boards);
+  if (isBoardEmpty(current)) delete out[fromKey]; else out[fromKey] = copyBoard(current);
+  return { boards: out, board: copyBoard(out[toKey]) };
+}
+// Highest numeric id suffix across all boards, so new ids never collide with
+// a restored board's.
+function maxIdNum(boards) {
+  let n = 0;
+  for (const k in boards) {
+    const b = boards[k] || {};
+    [...(b.gears || []), ...(b.shafts || [])].forEach(o => { const m = /\d+$/.exec(o.id); if (m) n = Math.max(n, Number(m[0])); });
+  }
+  return n;
+}
 // __PURE_END__
 
 if (typeof module !== 'undefined') module.exports = {
   GRAB_MIN, SNAP_TOLERANCE, slug, buildExportName, isGearAllowed, grabRadius,
   overlapsSameLayer, crossPlaneNearMesh, serializeProgress, mergeLoadedProgress,
-  gateStep, motorToLoadStages
+  gateStep, motorToLoadStages, fitToSheet, offSheetShafts, boardKeyFor,
+  isBoardEmpty, copyBoard, swapBoard, maxIdNum
 };
