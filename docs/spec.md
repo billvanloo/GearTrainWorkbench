@@ -66,7 +66,7 @@ Each challenge follows the same loop:
 ### 4.1 Objects
 
 **Gear**
-- `id`, `teeth` (8–60), `pitchRadius` (derived: teeth × module / 2; fixed module for all gears so tooth sizes match), `shaftId`, `meshes[]` (gear ids in mesh contact)
+- `id`, `teeth` (8–84), `pitchRadius` (derived: teeth × module / 2; fixed module for all gears so tooth sizes match), `shaftId`, `meshes[]` (gear ids in mesh contact)
 
 **Shaft**
 - `id`, `position {x, y}`, `gears[]` (1–2 gear ids), `rpm`, `torque` (computed), `role` (`motor` | `free` | `load`)
@@ -224,7 +224,7 @@ The tool has shipped and evolved past this draft. The following are authoritativ
 
 - **Progress persistence (supersedes §7.3, §8 "session-only", and the §10 "future" item).** Completed challenges, attempt counts, the attempt log, and the student name persist in the browser's `localStorage` and survive a refresh. The JSON save file (schema version 2) also carries the student name and progress and remains backward-compatible with version-1 files. Every download (image, report, save file) is named with the student, challenge, and date; names contain no periods (challenge 2.2 becomes `challenge-2-2`) so print-to-PDF can append `.pdf`. The report waits for its drawing to decode before opening the print dialog.
 
-- **Accessibility (extends §5).** The drawing area is fully keyboard-operable — 1–9 place a gear, N/P select, arrows move, M mesh, S stack, F flip plane, O/L attach motor/load, Delete remove — and exposes an accessible name plus an `aria-live` running text description of the train (which honors the prediction gate). The gear animation honors the OS `prefers-reduced-motion` setting, read live. The Motor control's gold meets the 4.5:1 contrast standard.
+- **Accessibility (extends §5).** The drawing area is fully keyboard-operable — 1–9 and 0 place a gear, N/P select, arrows move, M mesh, S stack, F flip plane, O/L attach motor/load, Delete remove — and exposes an accessible name plus an `aria-live` running text description of the train (which honors the prediction gate). The gear animation honors the OS `prefers-reduced-motion` setting, read live. The Motor control's gold meets the 4.5:1 contrast standard.
 
 - **Device support (clarifies §5).** Targeted at laptops, desktops, and full-size tablets. A dedicated phone layout is not yet implemented; on-screen wording no longer implies phone support.
 
