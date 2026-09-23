@@ -50,7 +50,16 @@ Two pure cores live in `dev/` and are embedded verbatim in `index.html`, where t
 - **`dev/solver.js`** — the physics (meshes, speeds, torques, direction, validation).
 - **`dev/logic.js`** — the non-canvas decisions: download naming, per-challenge palette limits, snap/grab geometry, progress serialization + save-file merge, the reveal-gate state machine, and the motor→load stage reconstruction behind "Show the working".
 
-If you edit either, change the module in `dev/` first, run its unit tests, then sync the inline copy in `index.html` (the block between the `__PURE_BEGIN__`/`__PURE_END__` markers) and run the matching `verify-*.js`. Canvas rendering and pointer interaction are still verified by hand.
+If you edit either, change the module in `dev/` first, run its unit tests, then sync the inline copy in `index.html` (the block between the `__PURE_BEGIN__`/`__PURE_END__` markers) and run the matching `verify-*.js`.
+
+`dev/e2e.js` drives the real page in headless Chromium to cover what the pure tests cannot: the train staying on a shrinking sheet, per-challenge boards (including across a refresh), the challenge brief, and the print report. It is the one test that needs a dependency, Playwright, which is not installed by default:
+
+```
+npm i --no-save playwright && npx playwright install chromium   # once, from the repo root
+cd dev && node e2e.js   # 18 in-browser checks; set CHROMIUM_PATH to use an existing Chromium
+```
+
+Pointer dragging itself is still verified by hand.
 
 `docs/spec.md` is the original functional specification.
 
